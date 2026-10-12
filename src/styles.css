@@ -73,9 +73,21 @@ button:hover { border-color: var(--accent); }
 .filters label.check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); padding-bottom: 8px; }
 .filters input, .filters select { color: var(--text); min-height: 36px; }
 
-.compare { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 20px; }
+.compare, .build { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 20px; }
 .compare-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.compare p { margin: 4px 0; }
+.compare p, .build p { margin: 4px 0; }
+
+.build h3 { font-size: 0.95rem; margin: 12px 0 6px; }
+.build-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-content: start; margin-top: 12px; }
+.slot label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+.slot select { width: 100%; min-height: 36px; color: var(--text); }
+.totals th { font-weight: 500; color: var(--muted); }
+.save { display: flex; gap: 6px; margin-top: 12px; }
+.save input { flex: 1; min-width: 0; }
+.saved { list-style: none; padding: 0; margin: 0; }
+.saved li { display: flex; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.saved li span { flex: 1; overflow-wrap: anywhere; }
 .notice { color: var(--warn-text); }
 
 .scroll { overflow-x: auto; }
@@ -107,4 +119,5 @@ footer p { margin: 4px 0; }
 @media (max-width: 640px) {
   .top { flex-direction: column; }
   .filters label { flex: 1 1 140px; }
+  .build-grid { grid-template-columns: 1fr; }
 }

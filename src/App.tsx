@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import data from '../data/items.json';
 import { LANGS, translate } from './i18n.ts';
 import type { Lang } from './i18n.ts';
 import { ELEMENTS, SKILLS, SLOTS, VOCATIONS } from './lib/types.ts';
 import type { Element, Item, ItemData, Slot, Vocation } from './lib/types.ts';
 import { bestIndexes, formatDelta, formatValue, visibleRows } from './lib/stats.ts';
+import { buildTotals, equip, fitsTogether, fromIds, toIds } from './lib/build.ts';
+import type { Build, BuildIds } from './lib/build.ts';
 
 const { meta, items } = data as ItemData;
+const byId = new Map(items.map((i) => [i.id, i]));
 const MAX_COMPARE = 4;
 const PAGE = 150;
 type Sort = 'level' | 'name' | 'armor' | 'defense' | 'attack' | 'protection';
@@ -19,6 +23,19 @@ function initialLang(): Lang {
     if (saved === 'en' || saved === 'pl') return saved;
   } catch { /* storage blocked */ }
   return navigator.language.toLowerCase().startsWith('pl') ? 'pl' : 'en';
+}
+
+// Builds live in this browser only; storage may be blocked or hold IDs from older item data.
+function readStored(key: string): unknown {
+  try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
+}
+function writeStored(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked */ }
+}
+interface SavedBuild { name: string; slots: BuildIds }
+function initialSaved(): SavedBuild[] {
+  const value = readStored('builds');
+  return Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
 }
 
 // A comparison lives in the URL hash (#compare=id,id) so it can be shared as a link.
@@ -70,6 +87,9 @@ function bonuses(item: Item, t: T): string {
   return [...parts, ...(item.other ?? [])].join(', ');
 }
 
+const usable = (i: Item, vocation: Vocation | '', maxLevel: number, showUnavailable: boolean) =>
+  (showUnavailable || !i.status) && (!vocation || !i.vocations.length || i.vocations.includes(vocation)) && i.level <= maxLevel;
+
 const vocationText = (item: Item, t: T) => (item.vocations.length ? item.vocations.map((v) => t(`voc.${v}`)).join(', ') : t('everyVocation'));
 
 export default function App() {
@@ -84,6 +104,10 @@ export default function App() {
   const [limit, setLimit] = useState(PAGE);
   const [compareIds, setCompareIds] = useState<number[]>(initialCompare);
   const [notice, setNotice] = useState('');
+  const [build, setBuild] = useState<Build>(() => fromIds(readStored('build'), byId));
+  const [saved, setSaved] = useState<SavedBuild[]>(initialSaved);
+  const [buildName, setBuildName] = useState('');
+  const [buildNotice, setBuildNotice] = useState('');
 
   const t: T = (key, vars) => translate(lang, key, vars);
 
@@ -96,19 +120,27 @@ export default function App() {
     history.replaceState(null, '', compareIds.length ? `#compare=${compareIds.join(',')}` : location.pathname + location.search);
   }, [compareIds]);
 
+  useEffect(() => writeStored('build', toIds(build)), [build]);
+  useEffect(() => writeStored('builds', saved), [saved]);
+
+  const maxLevel = level === '' ? Infinity : Number(level);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const maxLevel = level === '' ? Infinity : Number(level);
     return items
       .filter((i) =>
-        (showUnavailable || !i.status) &&
-        (!vocation || !i.vocations.length || i.vocations.includes(vocation)) &&
+        usable(i, vocation, maxLevel, showUnavailable) &&
         (!slot || i.slot === slot) &&
-        i.level <= maxLevel &&
         (!element || (i.resist[element] ?? 0) > 0) &&
         (!q || i.name.toLowerCase().includes(q)))
       .sort((a, b) => (sort === 'name' ? 0 : sortValue(b, sort, element) - sortValue(a, sort, element)) || a.name.localeCompare(b.name));
-  }, [query, vocation, slot, level, element, sort, showUnavailable]);
+  }, [query, vocation, slot, maxLevel, element, sort, showUnavailable]);
+
+  const slotOptions = useMemo(() => {
+    const fit = items.filter((i) => usable(i, vocation, maxLevel, showUnavailable)).sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
+    return Object.fromEntries(SLOTS.map((s) => [s, fit.filter((i) => i.slot === s)])) as Record<Slot, Item[]>;
+  }, [vocation, maxLevel, showUnavailable]);
+  const totals = buildTotals(build);
 
   useEffect(() => setLimit(PAGE), [filtered]);
 
@@ -125,6 +157,26 @@ export default function App() {
       setCompareIds([...compareIds, id]);
       setNotice('');
     }
+  }
+
+  function wear(slot: Slot, item: Item | undefined) {
+    const next = equip(build, slot, item);
+    const removed = SLOTS.filter((s) => s !== slot && build[s] && next[s] !== build[s]).map((s) => build[s]!.name);
+    setBuildNotice(item && removed.length ? t('unequipped', { name: removed.join(', '), other: item.name }) : '');
+    setBuild(next);
+  }
+
+  function loadBuild(next: Build) {
+    setBuild(next);
+    setBuildNotice('');
+  }
+
+  function saveBuild(e: FormEvent) {
+    e.preventDefault();
+    const name = buildName.trim();
+    if (!name) return;
+    setSaved([...saved.filter((b) => b.name !== name), { name, slots: toIds(build) }]);
+    setBuildName('');
   }
 
   return (
@@ -187,6 +239,81 @@ export default function App() {
           <input type="checkbox" checked={showUnavailable} onChange={(e) => setShowUnavailable(e.target.checked)} />
           {t('showUnavailable')}
         </label>
+      </section>
+
+      <section className="build" aria-labelledby="build-title">
+        <div className="compare-head">
+          <h2 id="build-title">{t('build')}</h2>
+          {totals.length > 0 && <button type="button" onClick={() => loadBuild({})}>{t('clear')}</button>}
+        </div>
+        <p className="muted small">{t('buildHint')}</p>
+        {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
+        <div className="build-grid">
+          <div className="slots">
+            {SLOTS.map((s) => {
+              const worn = build[s];
+              const options = worn && !slotOptions[s].includes(worn) ? [worn, ...slotOptions[s]] : slotOptions[s];
+              const otherHand = s === 'weapon' ? build.shield : s === 'shield' ? build.weapon : undefined;
+              return (
+                <div key={s} className="slot">
+                  <label>
+                    {t(`slot.${s}`)}
+                    <select value={worn?.id ?? ''} onChange={(e) => wear(s, byId.get(Number(e.target.value)))}>
+                      <option value="">{t('emptySlot')}</option>
+                      {options.map((i) => {
+                        const clash = otherHand && !(s === 'weapon' ? fitsTogether(i, otherHand) : fitsTogether(otherHand, i))
+                          ? ` · ${t('takesOff', { name: otherHand.name })}` : '';
+                        return (
+                          <option key={i.id} value={i.id}>
+                            {i.name}{i.level ? ` (${i.level})` : ''}{i.hands === 2 ? ` · ${t('twoHanded')}` : ''}{clash}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                  {worn && <span className="muted small">{[mainStats(worn, t), protections(worn, t)].filter(Boolean).join(' · ')}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <h3>{t('totals')}</h3>
+            {totals.length === 0 ? (
+              <p className="muted">{t('totalsEmpty')}</p>
+            ) : (
+              <table className="totals">
+                <tbody>
+                  {totals.map(({ row, total }) => (
+                    <tr key={row.key}>
+                      <th scope="row">{row.label(t)}</th>
+                      <td className="num">{formatValue(row, total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <p className="muted small">{t('totalsHint')}</p>
+            <form className="save" onSubmit={saveBuild}>
+              <input value={buildName} onChange={(e) => setBuildName(e.target.value)} placeholder={t('buildName')} aria-label={t('buildName')} maxLength={40} required />
+              <button type="submit">{t('save')}</button>
+            </form>
+            {saved.length > 0 && (
+              <>
+                <h3>{t('savedBuilds')}</h3>
+                <ul className="saved">
+                  {saved.map((b) => (
+                    <li key={b.name}>
+                      <span>{b.name}</span>
+                      <button type="button" aria-label={t('loadBuild', { name: b.name })} onClick={() => loadBuild(fromIds(b.slots, byId))}>{t('load')}</button>
+                      <button type="button" aria-label={t('deleteBuild', { name: b.name })} onClick={() => setSaved(saved.filter((x) => x !== b))}>{t('delete')}</button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p className="muted small">{t('savedLocal')}</p>
+          </div>
+        </div>
       </section>
 
       <section className="compare" aria-labelledby="compare-title">
