@@ -1,0 +1,30 @@
+name: Update item data
+
+on:
+  schedule:
+    - cron: '0 5 * * 1' # Mondays 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run import:items
+      # Only commit when the import produced valid data that passes the tests.
+      - run: npm test
+      - name: Commit changes
+        run: |
+          if git diff --quiet data/; then echo "No item changes."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update item data from TibiaWiki"
+          git push
