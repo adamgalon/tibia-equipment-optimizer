@@ -82,6 +82,10 @@ button:hover { border-color: var(--accent); }
 .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-content: start; margin-top: 12px; }
 .slot label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 .slot select { width: 100%; min-height: 36px; color: var(--text); }
+.upgrades { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.upgrades label { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: var(--muted); }
+.upgrades label.grow { flex: 1 1 200px; min-width: 0; }
+.upgrades select { min-height: 32px; padding: 4px 6px; }
 .totals th { font-weight: 500; color: var(--muted); }
 .save { display: flex; gap: 6px; margin-top: 12px; }
 .save input { flex: 1; min-width: 0; }

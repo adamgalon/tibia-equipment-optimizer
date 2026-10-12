@@ -1,5 +1,5 @@
 import { VOCATIONS } from './types.ts';
-import type { Element, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
+import type { Element, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
 
 /** Wiki item type -> equipment slot. Types not listed (exercise weapons, quest items, ...) are not equipment. */
 const SLOT_BY_TYPE: Record<string, Slot> = {
@@ -32,9 +32,22 @@ const ELEMENT_ATTACK_FIELDS: Record<string, Element> = {
   fire_attack: 'fire', earth_attack: 'earth', ice_attack: 'ice', energy_attack: 'energy', death_attack: 'death',
 };
 
-/** Reads the top-level `| key = value` parameters of the first `{{Infobox Object ...}}` in a page. */
-export function parseInfobox(wikitext: string): Record<string, string> | null {
-  const match = /\{\{Infobox Object(.*?)\n\}\}/s.exec(wikitext);
+/** Imbuement effect template -> the stat keys its parameters fill, in order (TibiaWiki "Template:Imbuement Effect/..."). */
+const IMBUEMENT_EFFECTS: Record<string, string[]> = {
+  'Dragon Hide': ['resist.fire'], 'Snake Skin': ['resist.earth'], 'Quara Scale': ['resist.ice'],
+  'Cloud Fabric': ['resist.energy'], 'Demon Presence': ['resist.holy'], 'Lich Shroud': ['resist.death'],
+  Scorch: ['convert.fire'], Venom: ['convert.earth'], Frost: ['convert.ice'], Electrify: ['convert.energy'], Reap: ['convert.death'],
+  Bash: ['skill.club'], Chop: ['skill.axe'], Slash: ['skill.sword'], Precision: ['skill.distance'], Punch: ['skill.fist'],
+  Blockade: ['skill.shielding'], Epiphany: ['skill.magic'], Swiftness: ['speed'],
+  Strike: ['critExtra', 'critChance'],
+  // The second parameter is the trigger chance, 100% at every level.
+  Vampirism: ['lifeLeech'], Void: ['manaLeech'],
+  Vibrancy: ['paralysisDeflection'],
+};
+
+/** Reads the top-level `| key = value` parameters of the first `{{<template> ...}}` in a page. */
+export function parseInfobox(wikitext: string, template = 'Infobox Object'): Record<string, string> | null {
+  const match = new RegExp(`\\{\\{${template}(.*?)\\n\\}\\}`, 's').exec(wikitext);
   if (!match) return null;
   const fields: Record<string, string> = {};
   for (const part of match[1].split('\n|')) {
@@ -173,4 +186,19 @@ export function toItem(fields: Record<string, string>, page: { title: string; re
   // Drop unset optional fields so the JSON stays small and diffs stay readable.
   for (const key of Object.keys(item) as (keyof Item)[]) if (item[key] === undefined) delete item[key];
   return item;
+}
+
+/** Converts Infobox Imbuement fields into an Imbuement, or null for effects the app does not model (e.g. capacity). */
+export function toImbuement(fields: Record<string, string>, page: { title: string; rev: number }): Imbuement | null {
+  const effect = /\{\{Imbuement Effect\/([^|}]+)\|([^}]*)\}\}/.exec(fields.effect ?? '');
+  const keys = effect && IMBUEMENT_EFFECTS[effect[1]];
+  const level = fields.prefix as Imbuement['level'];
+  if (!keys || !fields.type || !['Basic', 'Intricate', 'Powerful'].includes(level)) return null;
+  const params = effect[2].split('|');
+  const effects: Record<string, number> = {};
+  keys.forEach((key, i) => {
+    const value = num(params[i]);
+    if (value !== undefined) effects[key] = value;
+  });
+  return { name: page.title, type: fields.type, level, effects, fits: splitList(fields.slots).map((s) => s.toLowerCase()), rev: page.rev };
 }

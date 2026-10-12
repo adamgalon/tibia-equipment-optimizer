@@ -15,6 +15,7 @@ export interface StatRow {
 
 /** Forge classification -> highest reachable tier. */
 const MAX_TIER: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 10 };
+export const maxTier = (item: Item): number => MAX_TIER[item.upgradeClass ?? 0] ?? 0;
 
 const simple = (key: string, get: StatRow['get'], extra: Partial<StatRow> = {}): StatRow =>
   ({ key, label: (t) => t(key), get, ...extra });
@@ -43,7 +44,7 @@ export const STAT_ROWS: StatRow[] = [
   simple('manaLeech', (i) => i.manaLeech, { missingIsZero: true, percent: true }),
   simple('damageReflection', (i) => i.damageReflection, { missingIsZero: true }),
   simple('imbueSlots', (i) => i.imbueSlots, { missingIsZero: true }),
-  simple('maxTier', (i) => (i.upgradeClass ? MAX_TIER[i.upgradeClass] : undefined), { missingIsZero: true }),
+  simple('maxTier', (i) => maxTier(i) || undefined, { missingIsZero: true }),
   simple('mantra', (i) => i.mantra, { missingIsZero: true }),
 ];
 
@@ -64,7 +65,8 @@ export function bestIndexes(row: StatRow, items: Item[]): Set<number> {
 
 export function formatValue(row: StatRow, value: number | undefined): string {
   if (value === undefined) return '—';
-  const shown = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  // Two decimals: forge chances such as 0.13% need them.
+  const shown = String(Math.round(value * 100) / 100);
   return row.percent ? `${shown}%` : shown;
 }
 

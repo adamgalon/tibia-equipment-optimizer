@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAttributes, parseInfobox, parseResist, parseVocations, toItem } from './wiki.ts';
+import { parseAttributes, parseInfobox, parseResist, parseVocations, toImbuement, toItem } from './wiki.ts';
 
 const page = (fields: string) => `{{Infobox Object|List={{{1|}}}|GetValue={{{GetValue|}}}\n${fields}\n}}\nSome article text.`;
 const item = (fields: string, title = 'Test') => toItem(parseInfobox(page(fields))!, { title, rev: 1 });
@@ -74,5 +74,20 @@ describe('toItem', () => {
   it('rejects non-equipment and items without an ID', () => {
     expect(item('| name = Exercise Sword\n| itemid = 28552\n| primarytype = Exercise Weapons')).toBeNull();
     expect(item('| name = Mystery Helmet\n| primarytype = Helmets')).toBeNull();
+  });
+});
+
+describe('toImbuement', () => {
+  const imbuement = (fields: string, title = 'Powerful Strike') =>
+    toImbuement(parseInfobox(`{{Infobox Imbuement|List={{{1|}}}\n${fields}\n}}`, 'Infobox Imbuement')!, { title, rev: 1 });
+
+  it('maps each effect parameter to its stat, in template order', () => {
+    expect(imbuement('| prefix = Powerful\n| type = Strike\n| effect = {{Imbuement Effect/Strike|40%|5%}}\n| slots = swords, Bows')).toEqual({
+      name: 'Powerful Strike', type: 'Strike', level: 'Powerful', effects: { critExtra: 40, critChance: 5 }, fits: ['swords', 'bows'], rev: 1,
+    });
+  });
+
+  it('skips effects the app does not model', () => {
+    expect(imbuement('| prefix = Basic\n| type = Featherweight\n| effect = {{Imbuement Effect/Featherweight|3%}}\n| slots = containers')).toBeNull();
   });
 });

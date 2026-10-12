@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import data from '../data/items.json';
+import imbuementData from '../data/imbuements.json';
 import { LANGS, translate } from './i18n.ts';
 import type { Lang } from './i18n.ts';
 import { ELEMENTS, SKILLS, SLOTS, VOCATIONS } from './lib/types.ts';
-import type { Element, Item, ItemData, Slot, Vocation } from './lib/types.ts';
-import { bestIndexes, formatDelta, formatValue, visibleRows } from './lib/stats.ts';
-import { buildTotals, equip, fitsTogether, fromIds, toIds } from './lib/build.ts';
-import type { Build, BuildIds } from './lib/build.ts';
+import type { Element, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
+import { bestIndexes, formatDelta, formatValue, maxTier, visibleRows } from './lib/stats.ts';
+import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, toStored } from './lib/build.ts';
+import type { Build, StoredBuild, Worn } from './lib/build.ts';
 
 const { meta, items } = data as ItemData;
 const byId = new Map(items.map((i) => [i.id, i]));
+const IMBUEMENT_LEVELS = ['Basic', 'Intricate', 'Powerful'];
+// Grouped by type, weakest first, as in the game's imbuing window. The importer writes this shape; TypeScript infers one type per entry.
+const imbuements = [...(imbuementData as unknown as ImbuementData).imbuements]
+  .sort((a, b) => a.type.localeCompare(b.type) || IMBUEMENT_LEVELS.indexOf(a.level) - IMBUEMENT_LEVELS.indexOf(b.level));
+const imbuementByName = new Map(imbuements.map((i) => [i.name, i]));
 const MAX_COMPARE = 4;
 const PAGE = 150;
 type Sort = 'level' | 'name' | 'armor' | 'defense' | 'attack' | 'protection';
@@ -32,7 +38,7 @@ function readStored(key: string): unknown {
 function writeStored(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked */ }
 }
-interface SavedBuild { name: string; slots: BuildIds }
+interface SavedBuild { name: string; slots: StoredBuild }
 function initialSaved(): SavedBuild[] {
   const value = readStored('builds');
   return Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
@@ -90,6 +96,12 @@ function bonuses(item: Item, t: T): string {
 const usable = (i: Item, vocation: Vocation | '', maxLevel: number, showUnavailable: boolean) =>
   (showUnavailable || !i.status) && (!vocation || !i.vocations.length || i.vocations.includes(vocation)) && i.level <= maxLevel;
 
+const effectText = (imbuement: Imbuement, t: T) =>
+  Object.entries(imbuement.effects).map(([key, value]) => {
+    const row = ROW_BY_KEY.get(key)!;
+    return `${row.label(t)} +${formatValue(row, value)}`;
+  }).join(', ');
+
 const vocationText = (item: Item, t: T) => (item.vocations.length ? item.vocations.map((v) => t(`voc.${v}`)).join(', ') : t('everyVocation'));
 
 export default function App() {
@@ -104,7 +116,7 @@ export default function App() {
   const [limit, setLimit] = useState(PAGE);
   const [compareIds, setCompareIds] = useState<number[]>(initialCompare);
   const [notice, setNotice] = useState('');
-  const [build, setBuild] = useState<Build>(() => fromIds(readStored('build'), byId));
+  const [build, setBuild] = useState<Build>(() => fromStored(readStored('build'), byId, imbuementByName));
   const [saved, setSaved] = useState<SavedBuild[]>(initialSaved);
   const [buildName, setBuildName] = useState('');
   const [buildNotice, setBuildNotice] = useState('');
@@ -120,7 +132,7 @@ export default function App() {
     history.replaceState(null, '', compareIds.length ? `#compare=${compareIds.join(',')}` : location.pathname + location.search);
   }, [compareIds]);
 
-  useEffect(() => writeStored('build', toIds(build)), [build]);
+  useEffect(() => writeStored('build', toStored(build)), [build]);
   useEffect(() => writeStored('builds', saved), [saved]);
 
   const maxLevel = level === '' ? Infinity : Number(level);
@@ -161,9 +173,17 @@ export default function App() {
 
   function wear(slot: Slot, item: Item | undefined) {
     const next = equip(build, slot, item);
-    const removed = SLOTS.filter((s) => s !== slot && build[s] && next[s] !== build[s]).map((s) => build[s]!.name);
+    const removed = SLOTS.filter((s) => s !== slot && build[s] && next[s] !== build[s]).map((s) => build[s]!.item.name);
     setBuildNotice(item && removed.length ? t('unequipped', { name: removed.join(', '), other: item.name }) : '');
     setBuild(next);
+  }
+
+  // Clearing an imbuement closes the gap, so the chosen ones always fill the first dropdowns.
+  function imbue(slot: Slot, worn: Worn, index: number, imbuement: Imbuement | undefined) {
+    const list = worn.imbuements.slice();
+    if (imbuement) list[index] = imbuement;
+    else list.splice(index, 1);
+    setBuild({ ...build, [slot]: { ...worn, imbuements: list } });
   }
 
   function loadBuild(next: Build) {
@@ -175,7 +195,7 @@ export default function App() {
     e.preventDefault();
     const name = buildName.trim();
     if (!name) return;
-    setSaved([...saved.filter((b) => b.name !== name), { name, slots: toIds(build) }]);
+    setSaved([...saved.filter((b) => b.name !== name), { name, slots: toStored(build) }]);
     setBuildName('');
   }
 
@@ -252,13 +272,16 @@ export default function App() {
           <div className="slots">
             {SLOTS.map((s) => {
               const worn = build[s];
-              const options = worn && !slotOptions[s].includes(worn) ? [worn, ...slotOptions[s]] : slotOptions[s];
-              const otherHand = s === 'weapon' ? build.shield : s === 'shield' ? build.weapon : undefined;
+              const options = worn && !slotOptions[s].includes(worn.item) ? [worn.item, ...slotOptions[s]] : slotOptions[s];
+              const otherHand = (s === 'weapon' ? build.shield : s === 'shield' ? build.weapon : undefined)?.item;
+              const tiers = worn ? maxTier(worn.item) : 0;
+              // One more dropdown than chosen imbuements, up to the item's slots.
+              const imbueSelects = worn ? Math.min(worn.item.imbueSlots ?? 0, worn.imbuements.length + 1) : 0;
               return (
-                <div key={s} className="slot">
+                <div key={s} className="slot" role="group" aria-label={t(`slot.${s}`)}>
                   <label>
                     {t(`slot.${s}`)}
-                    <select value={worn?.id ?? ''} onChange={(e) => wear(s, byId.get(Number(e.target.value)))}>
+                    <select value={worn?.item.id ?? ''} onChange={(e) => wear(s, byId.get(Number(e.target.value)))}>
                       <option value="">{t('emptySlot')}</option>
                       {options.map((i) => {
                         const clash = otherHand && !(s === 'weapon' ? fitsTogether(i, otherHand) : fitsTogether(otherHand, i))
@@ -271,7 +294,34 @@ export default function App() {
                       })}
                     </select>
                   </label>
-                  {worn && <span className="muted small">{[mainStats(worn, t), protections(worn, t)].filter(Boolean).join(' · ')}</span>}
+                  {worn && <span className="muted small">{[mainStats(worn.item, t), protections(worn.item, t)].filter(Boolean).join(' · ')}</span>}
+                  {worn && (tiers > 0 || imbueSelects > 0) && (
+                    <div className="upgrades">
+                      {tiers > 0 && (
+                        <label>
+                          {t('tier')}
+                          <select value={worn.tier} onChange={(e) => setBuild({ ...build, [s]: { ...worn, tier: Number(e.target.value) } })}>
+                            {Array.from({ length: tiers + 1 }, (_, n) => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </label>
+                      )}
+                      {Array.from({ length: imbueSelects }, (_, n) => {
+                        const chosen = worn.imbuements[n];
+                        const others = worn.imbuements.filter((_, j) => j !== n);
+                        return (
+                          <label key={n} className="grow">
+                            {t('imbuement', { n: n + 1 })}
+                            <select value={chosen?.name ?? ''} onChange={(e) => imbue(s, worn, n, imbuementByName.get(e.target.value))}>
+                              <option value="">{t('noImbuement')}</option>
+                              {imbuements.filter((i) => i === chosen || canImbue(worn.item, i, others)).map((i) => (
+                                <option key={i.name} value={i.name}>{i.name}: {effectText(i, t)}</option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -293,6 +343,7 @@ export default function App() {
               </table>
             )}
             <p className="muted small">{t('totalsHint')}</p>
+            <p className="muted small">{t('imbuementHint')}</p>
             <form className="save" onSubmit={saveBuild}>
               <input value={buildName} onChange={(e) => setBuildName(e.target.value)} placeholder={t('buildName')} aria-label={t('buildName')} maxLength={40} required />
               <button type="submit">{t('save')}</button>
@@ -304,7 +355,7 @@ export default function App() {
                   {saved.map((b) => (
                     <li key={b.name}>
                       <span>{b.name}</span>
-                      <button type="button" aria-label={t('loadBuild', { name: b.name })} onClick={() => loadBuild(fromIds(b.slots, byId))}>{t('load')}</button>
+                      <button type="button" aria-label={t('loadBuild', { name: b.name })} onClick={() => loadBuild(fromStored(b.slots, byId, imbuementByName))}>{t('load')}</button>
                       <button type="button" aria-label={t('deleteBuild', { name: b.name })} onClick={() => setSaved(saved.filter((x) => x !== b))}>{t('delete')}</button>
                     </li>
                   ))}

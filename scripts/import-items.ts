@@ -1,14 +1,14 @@
-// Imports every equipment item from TibiaWiki into data/items.json.
+// Imports every equipment item and imbuement from TibiaWiki into data/items.json and data/imbuements.json.
 // Usage: npm run import:items
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { parseInfobox, toItem } from '../src/lib/wiki.ts';
-import type { Item, ItemData } from '../src/lib/types.ts';
+import { parseInfobox, toImbuement, toItem } from '../src/lib/wiki.ts';
+import type { DataMeta, Imbuement, Item } from '../src/lib/types.ts';
 
 const API = 'https://tibia.fandom.com/api.php';
 const USER_AGENT = 'tibia-equipment-optimizer/0.1 (+https://github.com/adamgalon/tibia-equipment-optimizer)';
-const OUT = new URL('../data/items.json', import.meta.url);
-// A healthy import returns ~1,600 items; far fewer means the wiki or the parser broke.
+// A healthy import returns ~1,600 items and ~70 imbuements; far fewer means the wiki or the parser broke.
 const MIN_ITEMS = 1000;
+const MIN_IMBUEMENTS = 60;
 
 async function getJson(params: Record<string, string>): Promise<any> {
   const url = `${API}?${new URLSearchParams({ ...params, format: 'json', formatversion: '2', maxlag: '5' })}`;
@@ -28,53 +28,71 @@ async function getJson(params: Record<string, string>): Promise<any> {
   }
 }
 
-// Serial requests, 50 pages each: every page that uses the object infobox (~10,000 pages, ~200 requests).
+/** Serial requests, 50 pages each, over every page that uses the template; calls onPage with its parsed infobox. */
+async function eachInfobox(template: string, onPage: (fields: Record<string, string>, page: { title: string; rev: number }) => void) {
+  let cont: Record<string, string> = {};
+  let requests = 0;
+  do {
+    const body = await getJson({
+      action: 'query', generator: 'embeddedin', geititle: `Template:${template}`, geinamespace: '0', geilimit: '50',
+      prop: 'revisions', rvprop: 'content|ids', rvslots: 'main', ...cont,
+    });
+    for (const page of body.query?.pages ?? []) {
+      const rev = page.revisions?.[0];
+      const fields = rev && parseInfobox(rev.slots.main.content, template);
+      if (fields) onPage(fields, { title: page.title, rev: rev.revid });
+    }
+    cont = body.continue ?? {};
+    if (++requests % 25 === 0) console.log(`${template}: ${requests} requests so far`);
+  } while (Object.keys(cont).length);
+  return requests;
+}
+
+/** Writes `{"meta":…, "<key>":[…]}` with one entry per line (readable git diffs), unless the entries are unchanged. */
+function writeIfChanged(file: string, key: string, entries: object[]) {
+  const out = new URL(`../data/${file}`, import.meta.url);
+  const lines = entries.map((e) => JSON.stringify(e)).join(',\n');
+  if (existsSync(out)) {
+    const previous = JSON.parse(readFileSync(out, 'utf8'))[key] as object[];
+    if (previous.map((e) => JSON.stringify(e)).join(',\n') === lines) return console.log(`No changes; data/${file} left untouched.`);
+  }
+  const meta: DataMeta = {
+    source: 'TibiaWiki (tibia.fandom.com)',
+    sourceUrl: 'https://tibia.fandom.com/',
+    license: 'CC BY-SA',
+    licenseUrl: 'https://www.fandom.com/licensing',
+    fetchedAt: new Date().toISOString(),
+    count: entries.length,
+  };
+  writeFileSync(out, `{"meta":${JSON.stringify(meta)},\n"${key}":[\n${lines}\n]}\n`);
+  console.log(`Wrote ${entries.length} entries to data/${file}`);
+}
+
+// Items: every page that uses the object infobox (~10,000 pages, ~200 requests).
 const items = new Map<number, Item>();
 const skipped: string[] = [];
-let cont: Record<string, string> = {};
-let requests = 0;
-do {
-  const body = await getJson({
-    action: 'query', generator: 'embeddedin', geititle: 'Template:Infobox Object', geinamespace: '0', geilimit: '50',
-    prop: 'revisions', rvprop: 'content|ids', rvslots: 'main', ...cont,
-  });
-  for (const page of body.query?.pages ?? []) {
-    const rev = page.revisions?.[0];
-    const fields = rev && parseInfobox(rev.slots.main.content);
-    if (!fields) continue;
-    const item = toItem(fields, { title: page.title, rev: rev.revid });
-    if (!item) {
-      if (fields.objectclass === 'Body Equipment' || fields.objectclass === 'Weapons') skipped.push(page.title);
-      continue;
-    }
-    const existing = items.get(item.id);
-    if (existing) console.warn(`Duplicate item ID ${item.id}: "${existing.wiki}" and "${item.wiki}"; keeping the first`);
-    else items.set(item.id, item);
+const itemRequests = await eachInfobox('Infobox Object', (fields, page) => {
+  const item = toItem(fields, page);
+  if (!item) {
+    if (fields.objectclass === 'Body Equipment' || fields.objectclass === 'Weapons') skipped.push(page.title);
+    return;
   }
-  cont = body.continue ?? {};
-  if (++requests % 25 === 0) console.log(`${requests} requests, ${items.size} items so far`);
-} while (Object.keys(cont).length);
+  const existing = items.get(item.id);
+  if (existing) console.warn(`Duplicate item ID ${item.id}: "${existing.wiki}" and "${item.wiki}"; keeping the first`);
+  else items.set(item.id, item);
+});
+console.log(`Parsed ${items.size} items in ${itemRequests} requests; ${skipped.length} equipment pages skipped (no item ID or not wearable).`);
 
-const sorted = [...items.values()].sort((a, b) => a.name.localeCompare(b.name));
-console.log(`Parsed ${sorted.length} items in ${requests} requests; ${skipped.length} equipment pages skipped (no item ID or not wearable).`);
-if (sorted.length < MIN_ITEMS) throw new Error(`Only ${sorted.length} items parsed; keeping the existing data file.`);
+const imbuements: Imbuement[] = [];
+await eachInfobox('Infobox Imbuement', (fields, page) => {
+  const imbuement = toImbuement(fields, page);
+  if (imbuement) imbuements.push(imbuement);
+  else console.log(`Imbuement page not modelled: ${page.title}`);
+});
+console.log(`Parsed ${imbuements.length} imbuements.`);
 
-// One item per line keeps git diffs readable.
-const itemLines = sorted.map((i) => JSON.stringify(i)).join(',\n');
-if (existsSync(OUT)) {
-  const previous = JSON.parse(readFileSync(OUT, 'utf8')) as ItemData;
-  if (previous.items.map((i) => JSON.stringify(i)).join(',\n') === itemLines) {
-    console.log('No item changes; data file left untouched.');
-    process.exit(0);
-  }
-}
-const meta: ItemData['meta'] = {
-  source: 'TibiaWiki (tibia.fandom.com)',
-  sourceUrl: 'https://tibia.fandom.com/',
-  license: 'CC BY-SA',
-  licenseUrl: 'https://www.fandom.com/licensing',
-  fetchedAt: new Date().toISOString(),
-  count: sorted.length,
-};
-writeFileSync(OUT, `{"meta":${JSON.stringify(meta)},\n"items":[\n${itemLines}\n]}\n`);
-console.log(`Wrote ${sorted.length} items to data/items.json`);
+// Check both before writing either, so a broken run never leaves the files out of step.
+if (items.size < MIN_ITEMS) throw new Error(`Only ${items.size} items parsed; keeping the existing data files.`);
+if (imbuements.length < MIN_IMBUEMENTS) throw new Error(`Only ${imbuements.length} imbuements parsed; keeping the existing data files.`);
+writeIfChanged('items.json', 'items', [...items.values()].sort((a, b) => a.name.localeCompare(b.name)));
+writeIfChanged('imbuements.json', 'imbuements', imbuements.sort((a, b) => a.name.localeCompare(b.name)));

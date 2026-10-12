@@ -58,7 +58,27 @@ export interface Item {
   rev: number;
 }
 
+export interface DataMeta { source: string; sourceUrl: string; license: string; licenseUrl: string; fetchedAt: string; count: number }
+
 export interface ItemData {
-  meta: { source: string; sourceUrl: string; license: string; licenseUrl: string; fetchedAt: string; count: number };
+  meta: DataMeta;
   items: Item[];
+}
+
+export interface Imbuement {
+  /** Page title such as "Powerful Dragon Hide"; also the key in saved builds. */
+  name: string;
+  /** "Dragon Hide": an item holds at most one imbuement of a type. */
+  type: string;
+  level: 'Basic' | 'Intricate' | 'Powerful';
+  /** Stat row key -> value, e.g. { 'resist.fire': 15 } or { critExtra: 40, critChance: 5 }. */
+  effects: Record<string, number>;
+  /** Item kinds as the wiki names them: "armors", "swords", "helmets (sorcerer)", ... */
+  fits: string[];
+  rev: number;
+}
+
+export interface ImbuementData {
+  meta: DataMeta;
+  imbuements: Imbuement[];
 }
