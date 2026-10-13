@@ -40,6 +40,12 @@
 - Parser fix: infoboxes are now read by matching braces instead of stopping at the first line that starts with `}}`. That recovered Crypt Bile, whose infobox closes on the same line; the same import also picked up 3 items new on the wiki (Ink Sword, Moonsilver Axe, Stellar Moonsilver Axe).
 - Verification: 40 unit tests, typecheck and production build pass. Checked in headless Edge at 1280 px (English) and 390 px (Polish) with Brachiodemon and Demon against a knight level 400 build, including the "Wear" button; the table values were checked by hand.
 
+## Weekly change note (2026-10-13)
+
+- The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
+- With the repository secret `ANTHROPIC_API_KEY`, Claude (`claude-opus-5-5`, effort `low`, server-side fallback on refusals) writes a short note above the list. Without it, or on any API error, refusal or empty answer, the list is used alone, so the data commit never depends on Claude. Expected cost: a few cents per week.
+- Verification: unit tests for the change list; dry run against `HEAD~1` without credentials (fallback path). The Claude call itself has not run yet: no key was available locally.
+
 ## Open questions
 
 - Can a weapon with its own life leech (for example Soulcutter, 2%) take Vampirism? TibiaWiki's Imbuing page says no. The app allows it until the owner checks in the game (raised 2026-10-13). If the game says no, add `lifeLeech` back to the blocked stats in `hasOwn` in `src/lib/build.ts` and flip its test.
