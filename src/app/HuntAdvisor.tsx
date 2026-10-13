@@ -4,6 +4,7 @@ import { formatGold, imbuementUpkeep, parseGold } from '../lib/prices.ts';
 import { stars, wikiUrl, protections, wearsOut } from './helpers.ts';
 import type { Creature } from '../lib/types.ts';
 import type { AppState } from './useApp.tsx';
+import { Toggle } from './Toggle.tsx';
 
 export function HuntAdvisor({ app }: { app: AppState }) {
   const { lang, slot, element, notice, build, creatures, creaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, place, setPlace, placeQuery, setPlaceQuery, budget, setBudget, t, totals, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, anyPrice, upgrades, wear, loadPlace, addCreature, killsPerHour, setKillsPerHour, hourSettings, setHourSettings, optimize } = app;
@@ -22,7 +23,9 @@ export function HuntAdvisor({ app }: { app: AppState }) {
       <div className="compare-head">
         <h2 id="hunt-title">{t('hunt')}</h2>
         {hunt.length > 0 && <button type="button" onClick={() => { setHunt([]); setPlace(''); setHuntNotice(''); }}>{t('clear')}</button>}
+        <Toggle app={app} name="hunt" />
       </div>
+      <div id="hunt-body" hidden={!!app.hidden.hunt}>
       <p className="muted small">{t('huntHint')}</p>
       {places && (
         <form className="hunt-pick" onSubmit={loadPlace}>
@@ -247,6 +250,7 @@ export function HuntAdvisor({ app }: { app: AppState }) {
           </div>
         </>
       )}
+      </div>
     </section>
   );
 }

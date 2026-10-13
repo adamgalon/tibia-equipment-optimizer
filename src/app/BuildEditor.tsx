@@ -5,6 +5,7 @@ import { canImbue, fitsTogether, fromStored } from '../lib/build.ts';
 import { formatGold } from '../lib/prices.ts';
 import { byId, imbuements, imbuementByName, mainStats, protections, effectText, items } from './helpers.ts';
 import type { AppState } from './useApp.tsx';
+import { Toggle } from './Toggle.tsx';
 
 export function BuildEditor({ app }: { app: AppState }) {
   const { slot, level, notice, build, setBuild, shareUrl, shareCopied, saved, setSaved, buildName, setBuildName, buildNotice, worlds, worldsLoading, world, setWorld, market, marketStatus, ownPrices, t, slotOptions, perkTable, totals, vocationClash, wornPrices, buildValue, unpriced, upgrades, wear, imbue, loadBuild, setPerk, shareBuild, saveBuild, loadWorlds, priceText, commitOwnPrice } = app;
@@ -13,7 +14,9 @@ export function BuildEditor({ app }: { app: AppState }) {
       <div className="compare-head">
         <h2 id="build-title">{t('build')}</h2>
         {totals.length > 0 && <button type="button" onClick={() => loadBuild({})}>{t('clear')}</button>}
+        <Toggle app={app} name="build" />
       </div>
+      <div id="build-body" hidden={!!app.hidden.build}>
       <p className="muted small">{t('buildHint')}</p>
       {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
       {vocationClash && <p className="notice" role="status">{t('vocationClash', { items: vocationClash })}</p>}
@@ -173,6 +176,7 @@ export function BuildEditor({ app }: { app: AppState }) {
           )}
           <p className="muted small">{t('savedLocal')}</p>
         </div>
+      </div>
       </div>
     </section>
   );

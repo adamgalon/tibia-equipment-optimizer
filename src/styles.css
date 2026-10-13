@@ -163,3 +163,9 @@ footer p { margin: 4px 0; }
 .hour-options label.check { flex-direction: row; align-items: center; color: var(--text); }
 .hour-options select, .hour-options input:not([type=checkbox]) { min-height: 32px; color: var(--text); max-width: 200px; }
 .optimize { margin-top: 12px; font-weight: 600; border-color: var(--accent); }
+
+/* Section headers: title on the left, Clear and Hide/Show on the right. */
+.compare-head { gap: 8px; }
+.compare-head > :first-child { margin-right: auto; }
+.perks summary { cursor: pointer; font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.perks ol { margin: 4px 0; padding-left: 18px; font-size: 0.8rem; font-weight: 400; }

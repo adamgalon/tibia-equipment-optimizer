@@ -82,6 +82,12 @@
 - A footer link opens a new GitHub issue for problems and ideas.
 - Verification: 65 unit tests and the Playwright smoke tests pass (they now cover stamina, profit, and the optimizer refusing without a vocation and saving the old build). A knight 400 session in Claustrophobic Inferno was checked by hand: 7,345,500 experience and 1.97kk loot per hour at 300 kills with stamina, 25k imbuement fees, 442.5k profit with 1.5kk supplies.
 
+## Fourth round (2026-10-13)
+
+- Every weapon in the item list has a "Proficiency perks" fold-out with its perk choices per level, and the comparison shows one row per proficiency level, so weapons can be compared by perks before wearing them.
+- The build editor, hunt advisor, comparison and item list each have a Hide/Show button (`aria-expanded`); the choice is kept in browser storage.
+- Verification: 65 unit tests and 6 Playwright tests (desktop and phone) pass, including hiding a section across a reload and the Soulcutter perks in the list and the comparison.
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.

@@ -8,6 +8,8 @@ A free web app for [Tibia](https://www.tibia.com) players to compare equipment a
 
 - Browse all ~1,600 wearable items: helmets, armors, legs, boots, amulets, rings, weapons (including Monk fist weapons), shields, spellbooks, quivers and ammunition.
 - Filter by vocation, slot, your level and elemental protection; sort by level, armor, defense, attack or protection.
+- Open any weapon's Weapon Proficiency perks in the list, or compare weapons by perks.
+- Hide the sections you are not using; the page remembers.
 - Compare up to 4 items side by side. The best value in each row is highlighted, with the difference to the first item. Comparisons are kept in the URL, so you can share a link.
 - Build editor (step 2): pick an item for each of the 10 slots, set its forge tier and imbuements, and see total armor, skills, protections and forge effect chances. Choose Weapon Proficiency perks for the weapon. Two-handed weapons take the shield off, and mixed-vocation builds get a warning. Builds are saved in your browser and can be shared by link.
 - Hunt advisor (step 3): pick the creatures you hunt and see their hardest hits per element and how much your build blocks, which element to attack them with, and the top 3 items per slot for that damage mix, with a button to wear each one.

@@ -40,6 +40,23 @@ test('catalog, build totals, hunt advisor and share link work together', async (
   await expect(page.getByLabel('Link to this build')).toHaveValue(/#build=[\w-]+$/);
 });
 
+test('sections hide and stay hidden, and weapons show their proficiency perks', async ({ page }) => {
+  const build = page.locator('.build');
+  await build.getByRole('button', { name: 'Hide' }).click();
+  await expect(page.locator('#build-body')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#build-body')).toBeHidden();
+  await build.getByRole('button', { name: 'Show' }).click();
+  await expect(page.locator('#build-body')).toBeVisible();
+
+  await page.getByLabel('Search item').fill('Soulcutter');
+  const row = page.locator('.items tbody tr').filter({ hasText: 'Soulcutter' }).first();
+  await row.getByText('Proficiency perks').click();
+  await expect(row.locator('.perks')).toContainText('+1 Sword Fighting');
+  await row.getByRole('button', { name: /Add Soulcutter/ }).click();
+  await expect(page.locator('.compare-table').getByRole('row', { name: /^Proficiency 1/ })).toContainText('+1 Sword Fighting');
+});
+
 test('the page never scrolls sideways', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

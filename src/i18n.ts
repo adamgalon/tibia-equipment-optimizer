@@ -79,6 +79,9 @@ const en: Record<string, string> = {
   noImbuement: "— none —",
   perkLevel: "Proficiency {n}",
   noPerk: "— no perk —",
+  perksSummary: "Proficiency perks",
+  show: "Show",
+  hide: "Hide",
   perkHint: "Proficiency perks: skill, critical and leech perks count in the totals; perks that apply only to some attacks, spells or creatures are not counted. Swapped perks (Summer Update 2026) are not modelled.",
   imbuementHint:
     "Imbuement choices follow each imbuement's TibiaWiki page. A few items have exceptions listed on the wiki's Imbuing page.",
@@ -345,6 +348,9 @@ const pl: Record<string, string> = {
   noImbuement: "— brak —",
   perkLevel: "Biegłość {n}",
   noPerk: "— bez perka —",
+  perksSummary: "Perki biegłości",
+  show: "Pokaż",
+  hide: "Ukryj",
   perkHint: "Perki biegłości: perki umiejętności, krytyczne i kradzieży liczą się do sumy; perki działające tylko na niektóre ataki, czary lub potwory nie są liczone. Zamiana perków (Summer Update 2026) nie jest uwzględniona.",
   imbuementHint:
     "Dostępne imbuementy wynikają z ich stron na TibiaWiki. Kilka przedmiotów ma wyjątki opisane na stronie Imbuing.",

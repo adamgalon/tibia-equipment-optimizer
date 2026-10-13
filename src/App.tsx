@@ -6,12 +6,13 @@ import { bestIndexes, formatDelta, formatValue } from './lib/stats.ts';
 import { MAX_COMPARE, PAGE, wikiUrl, mainStats, protections, bonuses, vocationText, meta, items } from './app/helpers.ts';
 import type { Sort } from './app/helpers.ts';
 import { useApp } from './app/useApp.tsx';
+import { Toggle } from './app/Toggle.tsx';
 import { BuildEditor } from './app/BuildEditor.tsx';
 import { HuntAdvisor } from './app/HuntAdvisor.tsx';
 
 export default function App() {
   const app = useApp();
-  const { lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, market, t, filtered, attack, best, compared, rows, toggleCompare, character, setCharacter, characterStatus, lookUpCharacter } = app;
+  const { lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, market, t, filtered, attack, best, compared, rows, toggleCompare, character, setCharacter, characterStatus, lookUpCharacter, proficiencyOf } = app;
 
   return (
     <div className="page">
@@ -92,7 +93,9 @@ export default function App() {
         <div className="compare-head">
           <h2 id="compare-title">{t('compare')} ({compared.length}/{MAX_COMPARE})</h2>
           {compared.length > 0 && <button type="button" onClick={() => setCompareIds([])}>{t('clear')}</button>}
+          <Toggle app={app} name="compare" />
         </div>
+        <div id="compare-body" hidden={!!app.hidden.compare}>
         {notice && <p className="notice" role="status">{notice}</p>}
         {compared.length === 0 ? (
           <p className="muted">{t('compareHint', { n: MAX_COMPARE })}</p>
@@ -132,6 +135,12 @@ export default function App() {
                     </tr>
                   );
                 })}
+                {Array.from({ length: Math.max(0, ...compared.map((i) => proficiencyOf(i)?.levels.length ?? 0)) }, (_, level) => (
+                  <tr key={`perk-${level}`}>
+                    <th scope="row">{t('perkLevel', { n: level + 1 })}</th>
+                    {compared.map((item) => <td key={item.id} className="small">{proficiencyOf(item)?.levels[level]?.join(' / ') || '—'}</td>)}
+                  </tr>
+                ))}
                 {compared.some((i) => i.augments || i.other) && (
                   <tr>
                     <th scope="row">{t('other')}</th>
@@ -142,10 +151,15 @@ export default function App() {
             </table>
           </div>
         )}
+        </div>
       </section>
 
       <section aria-labelledby="results-title">
-        <h2 id="results-title" className="results-title">{t('results', { n: filtered.length })}</h2>
+        <div className="compare-head">
+          <h2 id="results-title" className="results-title">{t('results', { n: filtered.length })}</h2>
+          <Toggle app={app} name="results" />
+        </div>
+        <div id="results-body" hidden={!!app.hidden.results}>
         {filtered.length === 0 ? (
           <p className="muted">{t('noResults')}</p>
         ) : (
@@ -183,6 +197,12 @@ export default function App() {
                         <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
                         {item.hands === 2 && <span className="tag">{t('twoHanded')}</span>}
                         {item.status && <span className="tag warn">{t(`status.${item.status}`)}</span>}
+                        {proficiencyOf(item) && (
+                          <details className="perks">
+                            <summary>{t('perksSummary')}</summary>
+                            <ol>{proficiencyOf(item)!.levels.map((options, level) => <li key={level}>{options.join(' / ')}</li>)}</ol>
+                          </details>
+                        )}
                       </td>
                       <td data-label={t('col.slot')}>{t(`slot.${item.slot}`)}</td>
                       <td className="num" data-label={t('col.level')}>{item.level || '—'}</td>
@@ -200,6 +220,7 @@ export default function App() {
         {filtered.length > limit && (
           <button type="button" className="more" onClick={() => setLimit(limit + PAGE)}>{t('showMore')}</button>
         )}
+        </div>
       </section>
 
       <footer className="muted small">
