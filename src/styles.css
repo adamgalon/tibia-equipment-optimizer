@@ -145,3 +145,15 @@ footer p { margin: 4px 0; }
   .filters label { flex: 1 1 140px; }
   .build-grid { grid-template-columns: 1fr; }
 }
+
+/* Phones: each item row becomes a card, every value labelled by its column. */
+@media (max-width: 640px) {
+  .items thead { display: none; }
+  .items, .items tbody, .items tr, .items td { display: block; }
+  .items tr { position: relative; padding: 8px 8px 8px 48px; border-bottom: 1px solid var(--border); }
+  .items td { border: 0; padding: 2px 0; text-align: left; min-width: 0; }
+  .items td:first-child { position: absolute; left: 8px; top: 8px; }
+  .items td:nth-child(2) { font-weight: 600; min-width: 0; }
+  .items td[data-label]:not(:empty)::before { content: attr(data-label) ": "; color: var(--muted); font-size: 0.8rem; }
+  .items td:empty { display: none; }
+}

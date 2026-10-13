@@ -123,6 +123,14 @@ export interface Hunt {
   rev: number;
 }
 
+/** A weapon group's proficiency perks: per level the texts of the perks to choose from (one is active at a time). */
+export interface Proficiency { name: string; items: string[]; levels: string[][] }
+
+export interface ProficiencyData {
+  meta: DataMeta;
+  proficiency: Proficiency[];
+}
+
 export interface HuntData {
   meta: DataMeta;
   hunts: Hunt[];

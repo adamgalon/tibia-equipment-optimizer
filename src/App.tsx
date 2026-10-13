@@ -5,9 +5,10 @@ import imbuementData from '../data/imbuements.json';
 import { LANGS, translate } from './i18n.ts';
 import type { Lang } from './i18n.ts';
 import { ELEMENTS, SKILLS, SLOTS, VOCATIONS } from './lib/types.ts';
-import type { Creature, CreatureData, Element, Hunt, HuntData, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
+import type { Creature, CreatureData, Element, Hunt, HuntData, Imbuement, ImbuementData, Item, ItemData, Proficiency, ProficiencyData, Slot, Vocation } from './lib/types.ts';
+import { perkEffects } from './lib/proficiency.ts';
 import { bestIndexes, formatDelta, formatValue, maxTier, visibleRows } from './lib/stats.ts';
-import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, toStored } from './lib/build.ts';
+import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, sharedVocations, toStored } from './lib/build.ts';
 import type { Build, StoredBuild, Worn } from './lib/build.ts';
 import { attackElements, bestProtection, incomingDamage, lootPerKill } from './lib/hunt.ts';
 import { formatGold, marketPrice, parseGold, upgradesPerGold } from './lib/prices.ts';
@@ -42,9 +43,28 @@ function writeStored(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked */ }
 }
 interface SavedBuild { name: string; slots: StoredBuild }
+// A shared build travels in the link as #build=<base64url of its stored JSON>; it is read once, before the hash is rewritten.
+const toBase64Url = (text: string) => btoa(String.fromCharCode(...new TextEncoder().encode(text))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const shareCode = (stored: StoredBuild) => toBase64Url(JSON.stringify(stored));
+const sharedBuild: unknown = (() => {
+  const code = location.hash.match(/build=([\w-]+)/)?.[1];
+  if (!code) return null;
+  try {
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(code.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))));
+  } catch {
+    return null;
+  }
+})();
+
 function initialSaved(): SavedBuild[] {
   const value = readStored('builds');
-  return Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
+  const saved: SavedBuild[] = Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
+  // Opening a shared link replaces the current build, so the one it replaces is kept here first.
+  const current = readStored('build');
+  if (sharedBuild && current && typeof current === 'object' && Object.keys(current).length && JSON.stringify(current) !== JSON.stringify(sharedBuild)) {
+    saved.push({ name: `Before link ${new Date().toLocaleString()}`, slots: current as StoredBuild });
+  }
+  return saved;
 }
 
 const MAX_HUNT = 12;
@@ -170,7 +190,9 @@ export default function App() {
   const [limit, setLimit] = useState(PAGE);
   const [compareIds, setCompareIds] = useState<number[]>(initialCompare);
   const [notice, setNotice] = useState('');
-  const [build, setBuild] = useState<Build>(() => fromStored(readStored('build'), byId, imbuementByName));
+  const [build, setBuild] = useState<Build>(() => fromStored(sharedBuild ?? readStored('build'), byId, imbuementByName));
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareCopied, setShareCopied] = useState(false);
   const [saved, setSaved] = useState<SavedBuild[]>(initialSaved);
   const [buildName, setBuildName] = useState('');
   const [buildNotice, setBuildNotice] = useState('');
@@ -180,6 +202,7 @@ export default function App() {
   const [creatureQuery, setCreatureQuery] = useState('');
   const [huntNotice, setHuntNotice] = useState('');
   const [places, setPlaces] = useState<Map<string, Hunt>>();
+  const [proficiency, setProficiency] = useState<Map<string, Proficiency>>();
   const [place, setPlace] = useState(() => { const p = readStored('place'); return typeof p === 'string' ? p : ''; });
   const [placeQuery, setPlaceQuery] = useState('');
   const [worlds, setWorlds] = useState<string[]>(cachedWorlds);
@@ -194,8 +217,9 @@ export default function App() {
 
   useEffect(() => {
     // Loaded after the first paint: only the hunt advisor needs creatures and hunting places.
-    Promise.all([import('../data/creatures.json'), import('../data/hunts.json')])
-      .then(([c, h]) => {
+    Promise.all([import('../data/creatures.json'), import('../data/hunts.json'), import('../data/proficiency.json')])
+      .then(([c, h, p]) => {
+        setProficiency(new Map((p.default as unknown as ProficiencyData).proficiency.flatMap((x) => x.items.map((item) => [item, x] as const))));
         setCreatures(new Map((c.default as unknown as CreatureData).creatures.map((x) => [x.name, x])));
         setPlaces(new Map((h.default as unknown as HuntData).hunts.map((x) => [x.name, x])));
       })
@@ -212,6 +236,7 @@ export default function App() {
   }, [compareIds]);
 
   useEffect(() => writeStored('build', toStored(build)), [build]);
+  useEffect(() => setShareUrl(''), [build]); // a link made earlier no longer matches the build
   useEffect(() => writeStored('builds', saved), [saved]);
   useEffect(() => writeStored('hunt', hunt), [hunt]);
   useEffect(() => writeStored('place', place), [place]);
@@ -258,7 +283,13 @@ export default function App() {
     const fit = items.filter((i) => usable(i, vocation, maxLevel, showUnavailable)).sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
     return Object.fromEntries(SLOTS.map((s) => [s, fit.filter((i) => i.slot === s)])) as Record<Slot, Item[]>;
   }, [vocation, maxLevel, showUnavailable]);
-  const totals = buildTotals(build);
+  // The worn weapon's chosen proficiency perks; only those that map onto a stat change the totals.
+  const perkTable = build.weapon && (proficiency?.get(build.weapon.item.wiki) ?? proficiency?.get(build.weapon.item.name));
+  const chosenPerks = (build.weapon?.perks ?? []).flatMap((choice, level) => perkTable?.levels[level]?.[choice] ?? []);
+  const totals = buildTotals(build, chosenPerks.map(perkEffects));
+  // Only vocation-restricted items can clash, so only they are named in the warning.
+  const vocationClash = sharedVocations(build).length === 0
+    && SLOTS.flatMap((s) => (build[s]?.item.vocations.length ? [`${build[s].item.name} (${vocationText(build[s].item, t)})`] : [])).join(', ');
 
   const creatureOptions = useMemo(() => [...(creatures?.keys() ?? [])].map((name) => <option key={name} value={name} />), [creatures]);
   const hunted = hunt.flatMap((name) => creatures?.get(name) ?? []);
@@ -317,6 +348,19 @@ export default function App() {
     setBuildNotice('');
   }
 
+  function setPerk(worn: Worn, level: number, choice: number) {
+    const perks = Array.from({ length: Math.max(worn.perks?.length ?? 0, level + 1) }, (_, i) => worn.perks?.[i] ?? -1);
+    perks[level] = choice;
+    setBuild({ ...build, weapon: { ...worn, perks } });
+  }
+
+  function shareBuild() {
+    const url = `${location.origin}${location.pathname}#build=${shareCode(toStored(build))}`;
+    setShareUrl(url);
+    setShareCopied(false);
+    navigator.clipboard?.writeText(url).then(() => setShareCopied(true), () => setShareCopied(false));
+  }
+
   function saveBuild(e: FormEvent) {
     e.preventDefault();
     const name = buildName.trim();
@@ -340,7 +384,7 @@ export default function App() {
     const p = priceOf(item);
     if (!p) return market ? t('noPrice') : '';
     if (p.kind === 'yours') return `${formatGold(p.gold)} (${t('priceYours')})`;
-    const age = p.observed ? t('daysOld', { n: Math.floor((Date.now() - p.observed) / DAY) }) : '';
+    const age = p.observed ? t('seenOn', { date: new Date(p.observed).toLocaleDateString(lang) }) : '';
     return `${formatGold(p.gold)} (${[t(p.kind === 'sale' ? 'priceSale' : 'priceOffer'), age].filter(Boolean).join(', ')})`;
   }
 
@@ -458,6 +502,7 @@ export default function App() {
         </div>
         <p className="muted small">{t('buildHint')}</p>
         {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
+        {vocationClash && <p className="notice" role="status">{t('vocationClash', { items: vocationClash })}</p>}
         <div className="build-grid">
           <div className="slots">
             {SLOTS.map((s) => {
@@ -525,6 +570,19 @@ export default function App() {
                       })}
                     </div>
                   )}
+                  {s === 'weapon' && worn && perkTable && (
+                    <div className="upgrades">
+                      {perkTable.levels.map((options, level) => (
+                        <label key={level} className="grow">
+                          {t('perkLevel', { n: level + 1 })}
+                          <select value={worn.perks?.[level] ?? -1} onChange={(e) => setPerk(worn, level, Number(e.target.value))}>
+                            <option value={-1}>{t('noPerk')}</option>
+                            {options.map((text, i) => <option key={i} value={i}>{text}</option>)}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -573,10 +631,18 @@ export default function App() {
             )}
             <p className="muted small">{t('totalsHint')}</p>
             <p className="muted small">{t('imbuementHint')}</p>
+            {perkTable && <p className="muted small">{t('perkHint')}</p>}
             <form className="save" onSubmit={saveBuild}>
               <input value={buildName} onChange={(e) => setBuildName(e.target.value)} placeholder={t('buildName')} aria-label={t('buildName')} maxLength={40} required />
               <button type="submit">{t('save')}</button>
             </form>
+            {totals.length > 0 && (
+              <div className="save">
+                <button type="button" onClick={shareBuild}>{t('shareBuild')}</button>
+                {shareUrl && <input readOnly value={shareUrl} aria-label={t('shareLink')} onFocus={(e) => e.currentTarget.select()} />}
+              </div>
+            )}
+            {shareUrl && <p className="muted small" role="status">{t(shareCopied ? 'shareCopied' : 'shareManual')}</p>}
             {saved.length > 0 && (
               <>
                 <h3>{t('savedBuilds')}</h3>
@@ -874,12 +940,12 @@ export default function App() {
                         {item.hands === 2 && <span className="tag">{t('twoHanded')}</span>}
                         {item.status && <span className="tag warn">{t(`status.${item.status}`)}</span>}
                       </td>
-                      <td>{t(`slot.${item.slot}`)}</td>
-                      <td className="num">{item.level || '—'}</td>
-                      <td>{vocationText(item, t)}</td>
-                      <td>{mainStats(item, t)}</td>
-                      <td>{protections(item, t)}</td>
-                      <td className="small">{bonuses(item, t)}</td>
+                      <td data-label={t('col.slot')}>{t(`slot.${item.slot}`)}</td>
+                      <td className="num" data-label={t('col.level')}>{item.level || '—'}</td>
+                      <td data-label={t('col.vocations')}>{vocationText(item, t)}</td>
+                      <td data-label={t('col.main')}>{mainStats(item, t)}</td>
+                      <td data-label={t('col.protections')}>{protections(item, t)}</td>
+                      <td className="small" data-label={t('col.bonuses')}>{bonuses(item, t)}</td>
                     </tr>
                   );
                 })}

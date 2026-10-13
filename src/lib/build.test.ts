@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTotals, canImbue, combineProtection, equip, fromStored, toStored } from './build.ts';
+import { buildTotals, canImbue, combineProtection, equip, fromStored, sharedVocations, toStored } from './build.ts';
 import type { Build } from './build.ts';
 import type { Imbuement, Item } from './types.ts';
 
@@ -34,11 +34,26 @@ describe('build totals', () => {
     expect(totals).toMatchObject({ 'resist.death': 10, 'resist.fire': 19, lifeLeech: 25 });
   });
 
+  it('adds extra effects such as proficiency perks', () => {
+    const totals = Object.fromEntries(buildTotals({ head: worn(helmet) }, [{ 'skill.magic': 1, critChance: 2 }]).map(({ row, total }) => [row.key, total]));
+    expect(totals).toMatchObject({ 'skill.magic': 3, critChance: 2 });
+  });
+
   it('amplifies forge chances with the boots tier, matching the wiki example', () => {
     const totals = (build: Build) => Object.fromEntries(buildTotals(build).map(({ row, total }) => [row.key, total]));
     expect(totals({ head: worn(helmet, 5) })).toMatchObject({ momentum: 10.8 });
     // TibiaWiki "Amplification": helmet tier 5 10.80% -> 11.78% with tier 3 boots (+9.1%).
     expect(totals({ head: worn(helmet, 5), feet: worn(boots, 3) })).toMatchObject({ momentum: 11.78, amplification: 9.1 });
+  });
+});
+
+describe('vocations', () => {
+  it('finds the vocations that can wear everything, ignoring items for every vocation', () => {
+    const knightOnly: Item = { ...helmet, vocations: ['knight'] };
+    const mage: Item = { ...armor, vocations: ['sorcerer', 'druid'] };
+    expect(sharedVocations({ head: worn(knightOnly), feet: worn(boots) })).toEqual(['knight']);
+    expect(sharedVocations({ head: worn(knightOnly), body: worn(mage) })).toEqual([]);
+    expect(sharedVocations({})).toHaveLength(5);
   });
 });
 
@@ -96,6 +111,14 @@ describe('stored builds', () => {
   it('round-trips items, tiers and imbuements', () => {
     const build: Build = { head: worn(helmet, 7), body: worn(armor, 0, [lichShroud, vampirism]) };
     expect(fromStored(toStored(build), byId, byName)).toEqual(build);
+  });
+
+  it('keeps weapon perk choices and cleans malformed ones', () => {
+    const sword: Item = { ...helmet, id: 9, slot: 'weapon', type: 'Sword Weapons' };
+    const ids = new Map([[9, sword]]);
+    expect(fromStored(toStored({ weapon: { ...worn(sword), perks: [0, -1, 2] } }), ids, byName).weapon?.perks).toEqual([0, -1, 2]);
+    expect(fromStored({ weapon: { id: 9, perks: [1, 'x', -5, 2.5] } }, ids, byName).weapon?.perks).toEqual([1, -1, -1, -1]);
+    expect(toStored({ weapon: { ...worn(sword), perks: [-1, -1] } }).weapon).not.toHaveProperty('perks');
   });
 
   it('reads bare item IDs from builds saved before forge tiers', () => {

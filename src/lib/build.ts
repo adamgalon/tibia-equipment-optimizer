@@ -1,14 +1,14 @@
-import { ELEMENTS, SLOTS } from './types.ts';
-import type { Imbuement, Item, Slot } from './types.ts';
+import { ELEMENTS, SLOTS, VOCATIONS } from './types.ts';
+import type { Imbuement, Item, Slot, Vocation } from './types.ts';
 import { STAT_ROWS, maxTier } from './stats.ts';
 import type { StatRow } from './stats.ts';
 
 /** An item as worn: the forge tier and imbuements belong to the player's copy, not to the catalog. */
-export interface Worn { item: Item; tier: number; imbuements: Imbuement[] }
+export interface Worn { item: Item; tier: number; imbuements: Imbuement[]; /** Weapons: the chosen perk per proficiency level, -1 for none. */ perks?: number[] }
 /** What is worn in each slot; a missing key is an empty slot. */
 export type Build = Partial<Record<Slot, Worn>>;
 /** A build as stored in the browser: item IDs and imbuement names. */
-export type StoredBuild = Partial<Record<Slot, { id: number; tier: number; imbuements: string[] }>>;
+export type StoredBuild = Partial<Record<Slot, { id: number; tier: number; imbuements: string[]; perks?: number[] }>>;
 
 /** Forge effect per slot and its chance (%) at tiers 1-10 (TibiaWiki "Onslaught", "Ruse", "Momentum", "Transcendence", "Amplification"). */
 export const FORGE_EFFECTS: Partial<Record<Slot, { key: string; chances: number[] }>> = {
@@ -39,12 +39,12 @@ export function combineProtection(values: number[]): number {
   return Math.round((1 - left) * 1000) / 10;
 }
 
-/** Non-zero totals of the worn items and their imbuements, then the forge chances. */
-export function buildTotals(build: Build): { row: StatRow; total: number }[] {
+/** Non-zero totals of the worn items, their imbuements and any extra effects (proficiency perks), then the forge chances. */
+export function buildTotals(build: Build, extra: Record<string, number>[] = []): { row: StatRow; total: number }[] {
   const worn = Object.values(build).filter((w): w is Worn => !!w);
-  const imbuements = worn.flatMap((w) => w.imbuements);
+  const effects = [...worn.flatMap((w) => w.imbuements.map((i) => i.effects)), ...extra];
   const summed = SUMMED_ROWS.flatMap((row) => {
-    const values = [...worn.map((w) => row.get(w.item) ?? 0), ...imbuements.map((i) => i.effects[row.key] ?? 0)];
+    const values = [...worn.map((w) => row.get(w.item) ?? 0), ...effects.map((e) => e[row.key] ?? 0)];
     const total = row.key.startsWith('resist.') ? combineProtection(values) : values.reduce((s, v) => s + v, 0);
     return total ? [{ row, total }] : [];
   });
@@ -57,6 +57,10 @@ export function buildTotals(build: Build): { row: StatRow; total: number }[] {
   });
   return [...summed, ...forge];
 }
+
+/** Vocations that can wear every worn item; empty when the items need different vocations. */
+export const sharedVocations = (build: Build): Vocation[] =>
+  VOCATIONS.filter((v) => Object.values(build).every((w) => !w || !w.item.vocations.length || w.item.vocations.includes(v)));
 
 /** Two-handed weapons leave no hand free, except that a quiver fits next to a bow or crossbow (TibiaWiki "Quivers"). */
 export const fitsTogether = (weapon: Item, offHand: Item) =>
@@ -105,7 +109,7 @@ export function canImbue(item: Item, imbuement: Imbuement, others: Imbuement[]):
 
 export const toStored = (build: Build): StoredBuild =>
   Object.fromEntries(Object.entries(build).flatMap(([slot, w]) =>
-    (w ? [[slot, { id: w.item.id, tier: w.tier, imbuements: w.imbuements.map((i) => i.name) }]] : [])));
+    (w ? [[slot, { id: w.item.id, tier: w.tier, imbuements: w.imbuements.map((i) => i.name), ...(w.perks?.some((p) => p >= 0) && { perks: w.perks }) }]] : [])));
 
 /**
  * Rebuilds a stored build, dropping whatever is unknown or no longer allowed (old data, edited storage).
@@ -116,7 +120,7 @@ export function fromStored(stored: unknown, byId: Map<number, Item>, imbuementBy
   const build: Build = {};
   for (const slot of SLOTS) {
     const raw = (stored as Record<string, unknown>)[slot];
-    const entry = (typeof raw === 'number' ? { id: raw } : raw ?? {}) as { id?: unknown; tier?: unknown; imbuements?: unknown };
+    const entry = (typeof raw === 'number' ? { id: raw } : raw ?? {}) as { id?: unknown; tier?: unknown; imbuements?: unknown; perks?: unknown };
     const item = byId.get(entry.id as number);
     if (item?.slot !== slot) continue;
     const tier = Math.min(Math.max(0, Math.trunc(Number(entry.tier) || 0)), maxTier(item));
@@ -126,6 +130,9 @@ export function fromStored(stored: unknown, byId: Map<number, Item>, imbuementBy
       if (imbuement && imbuements.length < (item.imbueSlots ?? 0) && canImbue(item, imbuement, imbuements)) imbuements.push(imbuement);
     }
     build[slot] = { item, tier, imbuements };
+    // Perk choices are indexes into the weapon's table, which loads later; one out of range simply shows as no perk.
+    const perks = Array.isArray(entry.perks) ? entry.perks.slice(0, 7).map((p) => (Number.isInteger(p) && p >= 0 ? p : -1)) : [];
+    if (slot === 'weapon' && perks.some((p) => p >= 0)) build[slot].perks = perks;
   }
   return build;
 }

@@ -1,7 +1,7 @@
 // Imports equipment items, imbuements, creatures (with loot statistics) and hunting places from TibiaWiki into data/*.json.
 // Usage: npm run import:items
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { num, parseInfobox, parseLoot, toCreature, toHunt, toImbuement, toItem } from '../src/lib/wiki.ts';
+import { num, parseInfobox, parseLoot, parseProficiency, toCreature, toHunt, toImbuement, toItem } from '../src/lib/wiki.ts';
 import type { Creature, DataMeta, Hunt, Imbuement, Item } from '../src/lib/types.ts';
 
 const API = 'https://tibia.fandom.com/api.php';
@@ -12,6 +12,7 @@ const MIN_IMBUEMENTS = 60;
 const MIN_CREATURES = 1500;
 const MIN_LOOT = 500;
 const MIN_HUNTS = 300;
+const MIN_PROFICIENCY = 300;
 
 async function getJson(params: Record<string, string>): Promise<any> {
   const url = `${API}?${new URLSearchParams({ ...params, format: 'json', formatversion: '2', maxlag: '5' })}`;
@@ -100,6 +101,14 @@ await eachInfobox('Infobox Imbuement', (fields, page) => {
 });
 console.log(`Parsed ${imbuements.length} imbuements.`);
 
+// Weapon proficiency: two pages hold every perk table and the weapon -> table mapping.
+async function pageText(title: string): Promise<string> {
+  const body = await getJson({ action: 'query', prop: 'revisions', rvprop: 'content', rvslots: 'main', titles: title });
+  return body.query?.pages?.[0]?.revisions?.[0]?.slots.main.content ?? '';
+}
+const proficiency = parseProficiency(await pageText('Weapon Proficiency Tables'), await pageText('Template:Weapon Proficiency Name'));
+console.log(`Parsed ${proficiency.length} weapon proficiency tables for ${proficiency.reduce((n, p) => n + p.items.length, 0)} weapons.`);
+
 // Creatures: ~2,800 pages use the creature infobox, ~57 requests.
 const creatures: Creature[] = [];
 let creaturesSkipped = 0;
@@ -138,6 +147,7 @@ console.log(`Parsed ${hunts.length} hunting places.`);
 
 // Check all before writing any, so a broken run never leaves the files out of step.
 if (lootPages < MIN_LOOT) throw new Error(`Only ${lootPages} creatures got loot statistics; keeping the existing data files.`);
+if (proficiency.length < MIN_PROFICIENCY) throw new Error(`Only ${proficiency.length} proficiency tables parsed; keeping the existing data files.`);
 if (hunts.length < MIN_HUNTS) throw new Error(`Only ${hunts.length} hunting places parsed; keeping the existing data files.`);
 if (items.size < MIN_ITEMS) throw new Error(`Only ${items.size} items parsed; keeping the existing data files.`);
 if (imbuements.length < MIN_IMBUEMENTS) throw new Error(`Only ${imbuements.length} imbuements parsed; keeping the existing data files.`);
@@ -146,3 +156,4 @@ writeIfChanged('items.json', 'items', [...items.values()].sort((a, b) => a.name.
 writeIfChanged('imbuements.json', 'imbuements', imbuements.sort((a, b) => a.name.localeCompare(b.name)));
 writeIfChanged('creatures.json', 'creatures', creatures.sort((a, b) => a.name.localeCompare(b.name)));
 writeIfChanged('hunts.json', 'hunts', hunts.sort((a, b) => a.name.localeCompare(b.name)));
+writeIfChanged('proficiency.json', 'proficiency', proficiency.sort((a, b) => a.name.localeCompare(b.name)));

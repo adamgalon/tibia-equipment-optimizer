@@ -1,7 +1,7 @@
 # Project status
 
 **Updated:** 2026-10-13  
-**Current step:** all five steps are done; next is closing known gaps  
+**Current step:** all five steps are done, and the first round of known gaps is closed  
 **Plan and stack:** see `decisions/0002-static-app-and-five-step-plan.md`
 
 ## Steps
@@ -56,6 +56,15 @@
 - Creatures and hunting places load after the first paint as separate chunks (148 KB and 23 KB gzipped).
 - Verification: 52 unit tests, typecheck and production build pass. Checked in headless Edge with Claustrophobic Inferno (typed as "claustro"); the table matched the data (Infernal Demon 17,430 experience, 6.64k loot per kill at NPC prices).
 
+## Known gaps closed (2026-10-13)
+
+- Phones: below 640 px the item list shows one card per item, each value labelled by its column, instead of a table that scrolls sideways.
+- A warning names the items when no vocation can wear the whole build together (for example a paladin helmet with knight gear).
+- "Copy link to this build" puts the build (items, tiers, imbuements, perks) into the link as `#build=<base64url JSON>`; nothing is stored on a server. Opening a link replaces the current build, so the replaced build is kept first under Saved builds as "Before link <date>". The link is checked like stored builds.
+- Weapon Proficiency: the importer reads the "Weapon Proficiency Tables" page and `Template:Weapon Proficiency Name` into `data/proficiency.json` (415 tables for 654 weapons; 646 of the 672 current weapons have one). The worn weapon gets one perk choice per proficiency level, saved with the build. Perks that add a skill, magic level, shielding, critical hit chance or extra damage, or life or mana leech count in the totals; conditional perks ("... for auto-attacks", "... against bosses", spell bonuses) are shown but not counted.
+- Polish text: a review pass (not by a native speaker) fixed plural agreement ("1 dni temu", "1182 przedmiotów"), typographic quotes, gender agreement and phrasing. Prices now show the date they were seen instead of their age in days, in both languages.
+- Verification: 57 unit tests, typecheck and production build pass. Checked in headless Edge: the warning appears and clears, a "+1 Sword Fighting" perk raises the sword total from 22 to 23, a share link opened in a browser with another build loads the shared build with its perk and keeps the other one, and the Polish phone list shows cards without sideways scrolling.
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
@@ -69,21 +78,18 @@
 ## Known gaps
 
 - Unparsed item effects are shown as text, not compared numerically: perfect shot, cleave, magic shield capacity, faster regeneration, spell augments.
-- Weapon Proficiency perks are not imported yet.
+- Proficiency perk swaps (Summer Update 2026) are not modelled, and conditional perks do not count in the totals.
 - Imbuement choices follow each imbuement's own wiki page, which differs from the Imbuing page in places: Powerful Strike is offered on every wand and rod (the Imbuing page names 11), Intricate Epiphany on every helmet (the Imbuing page says mage-only helmets plus 6 exceptions), and fist weapons only get Venom among the elemental damage imbuements.
 - Life leech, mana leech and crit from several sources are added together. No wiki page states how they combine.
 - Totals count equipment only. The 5% crit chance with 10% extra damage that every character has since Summer Update 2025, and Exaltation Overload event bonuses, are not included.
 - Build totals leave out defense (it comes from the shield or weapon, not a sum) and weapon attack; both are shown per item.
-- With the vocation filter on "All", a build can mix items for different vocations without a warning.
 - Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection only: armor, defense and mitigation, which also cut physical hits, are not modelled.
 - "Best protection" ranks items by their own protections only, without imbuements or forge tiers, and charged items such as Stone Skin Amulet and Might Ring rank high although their charges run out.
 - "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
 - Experience and loot are per kill only: without kills per hour or spawn sizes there is no per-hour estimate. Some loot statistics rest on few kills (Infernal Demon: 240), and the wiki's hunting place ratings and levels are community opinions.
 - Prices are for the base item: whether Tibia Market tracks forged (tiered) copies separately is unknown, and imbuements are not priced. Community data can be weeks old on some worlds; each price shows its age.
 - "Upgrades per gold" counts protection only, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
-- Saved builds cannot be shared by link or exported yet.
-- On phones the item list scrolls sideways; a card layout could replace the table later.
-- The Polish translation has not been reviewed by a native speaker.
+- The Polish text has had a careful review, but not yet by a native speaker.
 
 ## Earlier research
 

@@ -1,5 +1,5 @@
 import { ATTACK_ELEMENTS, VOCATIONS } from './types.ts';
-import type { Creature, Element, Hunt, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
+import type { Creature, Element, Hunt, Imbuement, Item, ItemStatus, Proficiency, Skill, Slot, Vocation } from './types.ts';
 
 /** Wiki item type -> equipment slot. Types not listed (exercise weapons, quest items, ...) are not equipment. */
 const SLOT_BY_TYPE: Record<string, Slot> = {
@@ -292,6 +292,20 @@ export function toHunt(fields: Record<string, string>, wikitext: string, page: {
   };
   for (const key of ['city', 'exp', 'loot'] as const) if (hunt[key] === undefined) delete hunt[key];
   return hunt;
+}
+
+/**
+ * Weapon proficiency from the "Weapon Proficiency Tables" page (===Group=== sections with |perk_1 = ... |perk_7 =,
+ * each perk a {{Weapon Proficiency Button |...|text=...}}) and the item -> group switch in Template:Weapon Proficiency Name.
+ */
+export function parseProficiency(tables: string, names: string): Proficiency[] {
+  const items = new Map<string, string[]>();
+  for (const [, item, group] of names.matchAll(/^\|\s*([^=\n|]+?)\s*=\s*([^\n|]+?)\s*$/gm)) items.set(group, [...(items.get(group) ?? []), item]);
+  return [...tables.matchAll(/===([^=\n]+)===\s*\n([\s\S]*?)(?====|<\/includeonly>|$)/g)].flatMap(([, title, body]) => {
+    const name = title.trim();
+    const levels = body.split(/\|\s*perk_\d+\s*=/).slice(1).map((level) => [...level.matchAll(/text=([^}]*)\}\}/g)].map((m) => cleanMarkup(m[1])));
+    return levels.length && items.has(name) ? [{ name, items: items.get(name)!, levels }] : [];
+  });
 }
 
 /** Converts Infobox Imbuement fields into an Imbuement, or null for effects the app does not model (e.g. capacity). */
