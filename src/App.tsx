@@ -5,11 +5,11 @@ import imbuementData from '../data/imbuements.json';
 import { LANGS, translate } from './i18n.ts';
 import type { Lang } from './i18n.ts';
 import { ELEMENTS, SKILLS, SLOTS, VOCATIONS } from './lib/types.ts';
-import type { Creature, CreatureData, Element, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
+import type { Creature, CreatureData, Element, Hunt, HuntData, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
 import { bestIndexes, formatDelta, formatValue, maxTier, visibleRows } from './lib/stats.ts';
 import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, toStored } from './lib/build.ts';
 import type { Build, StoredBuild, Worn } from './lib/build.ts';
-import { attackElements, bestProtection, incomingDamage } from './lib/hunt.ts';
+import { attackElements, bestProtection, incomingDamage, lootPerKill } from './lib/hunt.ts';
 import { formatGold, marketPrice, parseGold, upgradesPerGold } from './lib/prices.ts';
 import type { Price } from './lib/prices.ts';
 
@@ -47,7 +47,8 @@ function initialSaved(): SavedBuild[] {
   return Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
 }
 
-const MAX_HUNT = 8;
+const MAX_HUNT = 12;
+const stars = (n: number) => '★'.repeat(Math.min(n, 5)) + '☆'.repeat(5 - Math.min(n, 5));
 /** The hunt advisor's creatures by wiki page name; names the data no longer has are simply not shown. */
 function initialHunt(): string[] {
   const value = readStored('hunt');
@@ -178,6 +179,9 @@ export default function App() {
   const [hunt, setHunt] = useState<string[]>(initialHunt);
   const [creatureQuery, setCreatureQuery] = useState('');
   const [huntNotice, setHuntNotice] = useState('');
+  const [places, setPlaces] = useState<Map<string, Hunt>>();
+  const [place, setPlace] = useState(() => { const p = readStored('place'); return typeof p === 'string' ? p : ''; });
+  const [placeQuery, setPlaceQuery] = useState('');
   const [worlds, setWorlds] = useState<string[]>(cachedWorlds);
   const [worldsLoading, setWorldsLoading] = useState(false);
   const [world, setWorld] = useState(() => { const w = readStored('world'); return typeof w === 'string' ? w : ''; });
@@ -189,9 +193,12 @@ export default function App() {
   const t: T = (key, vars) => translate(lang, key, vars);
 
   useEffect(() => {
-    // Loaded after the first paint: only the hunt advisor needs the ~250 KB creature list.
-    import('../data/creatures.json')
-      .then((m) => setCreatures(new Map((m.default as unknown as CreatureData).creatures.map((c) => [c.name, c]))))
+    // Loaded after the first paint: only the hunt advisor needs creatures and hunting places.
+    Promise.all([import('../data/creatures.json'), import('../data/hunts.json')])
+      .then(([c, h]) => {
+        setCreatures(new Map((c.default as unknown as CreatureData).creatures.map((x) => [x.name, x])));
+        setPlaces(new Map((h.default as unknown as HuntData).hunts.map((x) => [x.name, x])));
+      })
       .catch(() => setCreaturesFailed(true));
   }, []);
 
@@ -207,6 +214,7 @@ export default function App() {
   useEffect(() => writeStored('build', toStored(build)), [build]);
   useEffect(() => writeStored('builds', saved), [saved]);
   useEffect(() => writeStored('hunt', hunt), [hunt]);
+  useEffect(() => writeStored('place', place), [place]);
   useEffect(() => writeStored('world', world), [world]);
   useEffect(() => writeStored('prices', ownPrices), [ownPrices]);
 
@@ -259,10 +267,13 @@ export default function App() {
   const best = bestProtection(slotOptions, incoming);
   const protectionAgainst = (e: Element) => totals.find(({ row }) => row.key === `resist.${e}`)?.total ?? 0;
 
-  const priceOf = (item: Item): Price | undefined => {
-    const own = ownPrices[world]?.[item.id];
-    return typeof own === 'number' && own > 0 ? { gold: own, kind: 'yours' } : market?.get(item.id);
+  const priceById = (id: number): Price | undefined => {
+    const own = ownPrices[world]?.[id];
+    return typeof own === 'number' && own > 0 ? { gold: own, kind: 'yours' } : market?.get(id);
   };
+  const priceOf = (item: Item) => priceById(item.id);
+  const currentPlace = place ? places?.get(place) : undefined;
+  const placeOptions = useMemo(() => [...(places?.keys() ?? [])].map((name) => <option key={name} value={name} />), [places]);
   const wornPrices = SLOTS.flatMap((s) => (build[s] ? [priceOf(build[s].item)] : []));
   const buildValue = wornPrices.reduce((sum, p) => sum + (p?.gold ?? 0), 0);
   const unpriced = wornPrices.filter((p) => !p).length;
@@ -348,12 +359,28 @@ export default function App() {
   }
 
   // An exact name wins, otherwise the first name that starts with the text ("brach" -> Brachiodemon).
+  const findName = (names: Iterable<string> | undefined, text: string) => {
+    const q = text.trim().toLowerCase();
+    const list = [...(names ?? [])];
+    return q ? list.find((n) => n.toLowerCase() === q) ?? list.find((n) => n.toLowerCase().startsWith(q)) : undefined;
+  };
+
+  function loadPlace(e: FormEvent) {
+    e.preventDefault();
+    if (!placeQuery.trim()) return;
+    const found = places?.get(findName(places.keys(), placeQuery) ?? '');
+    if (!found) return setHuntNotice(t('placeNotFound', { name: placeQuery.trim() }));
+    const known = found.creatures.filter((n) => creatures?.has(n));
+    setHunt(known.slice(0, MAX_HUNT));
+    setPlace(found.name);
+    setPlaceQuery('');
+    setHuntNotice(known.length > MAX_HUNT ? t('placeTrimmed', { n: MAX_HUNT }) : '');
+  }
+
   function addCreature(e: FormEvent) {
     e.preventDefault();
-    const q = creatureQuery.trim().toLowerCase();
-    if (!q) return;
-    const names = [...(creatures?.keys() ?? [])];
-    const found = names.find((n) => n.toLowerCase() === q) ?? names.find((n) => n.toLowerCase().startsWith(q));
+    if (!creatureQuery.trim()) return;
+    const found = findName(creatures?.keys(), creatureQuery);
     if (!found) return setHuntNotice(t('creatureNotFound', { name: creatureQuery.trim() }));
     setCreatureQuery('');
     if (hunt.includes(found)) return setHuntNotice('');
@@ -572,9 +599,29 @@ export default function App() {
       <section className="hunt" aria-labelledby="hunt-title">
         <div className="compare-head">
           <h2 id="hunt-title">{t('hunt')}</h2>
-          {hunt.length > 0 && <button type="button" onClick={() => { setHunt([]); setHuntNotice(''); }}>{t('clear')}</button>}
+          {hunt.length > 0 && <button type="button" onClick={() => { setHunt([]); setPlace(''); setHuntNotice(''); }}>{t('clear')}</button>}
         </div>
         <p className="muted small">{t('huntHint')}</p>
+        {places && (
+          <form className="hunt-pick" onSubmit={loadPlace}>
+            <label>
+              {t('huntingPlace')}
+              <input list="place-names" value={placeQuery} onChange={(e) => setPlaceQuery(e.target.value)} placeholder="Claustrophobic Inferno…" />
+            </label>
+            <datalist id="place-names">{placeOptions}</datalist>
+            <button type="submit">{t('loadPlace')}</button>
+          </form>
+        )}
+        {currentPlace && (
+          <p className="small">
+            <a href={wikiUrl(currentPlace.name)} target="_blank" rel="noreferrer" title={t('openWiki')}>{currentPlace.name}</a>
+            {currentPlace.city && ` · ${currentPlace.city}`}
+            {currentPlace.exp && <> · {t('expRating')} <span aria-label={t('stars', { n: currentPlace.exp })}>{stars(currentPlace.exp)}</span></>}
+            {currentPlace.loot && <> · {t('lootRating')} <span aria-label={t('stars', { n: currentPlace.loot })}>{stars(currentPlace.loot)}</span></>}
+            <br />
+            <span className="muted">{t('placeLevels', { knight: currentPlace.level.knight ?? '?', paladin: currentPlace.level.paladin ?? '?', mage: currentPlace.level.mage ?? '?' })}</span>
+          </p>
+        )}
         {creatures ? (
           <form className="hunt-pick" onSubmit={addCreature}>
             <label>
@@ -632,6 +679,33 @@ export default function App() {
                   </div>
                 )}
                 <p className="muted small">{t('incomingHint')}</p>
+                <h3>{t('perKill')}</h3>
+                <div className="scroll">
+                  <table className="totals">
+                    <thead>
+                      <tr>
+                        <th scope="col">{t('col.creature')}</th>
+                        <th scope="col" className="num">{t('col.exp')}</th>
+                        <th scope="col" className="num">{t('col.lootPerKill')}</th>
+                        <th scope="col" className="num">{t('col.kills')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...hunted].sort((a, b) => (b.exp ?? 0) - (a.exp ?? 0)).map((c) => {
+                        const loot = lootPerKill(c, (id) => priceById(id)?.gold);
+                        return (
+                          <tr key={c.name}>
+                            <th scope="row">{c.name}</th>
+                            <td className="num">{c.exp?.toLocaleString(lang) ?? '—'}</td>
+                            <td className="num">{loot === undefined ? '—' : formatGold(loot)}</td>
+                            <td className="num muted">{c.loot?.kills.toLocaleString(lang) ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted small">{t('perKillHint')}</p>
                 <h3>{t('attackWith')}</h3>
                 <p>
                   {attack.map(({ element, takes }) => (

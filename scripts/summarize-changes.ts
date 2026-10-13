@@ -12,6 +12,7 @@ const FILES = [
   { title: 'Items', file: 'items.json', list: 'items', key: (e: Entry) => String(e.id), label: (e: Entry) => String(e.name) },
   { title: 'Imbuements', file: 'imbuements.json', list: 'imbuements', key: (e: Entry) => String(e.name) },
   { title: 'Creatures', file: 'creatures.json', list: 'creatures', key: (e: Entry) => String(e.name) },
+  { title: 'Hunting places', file: 'hunts.json', list: 'hunts', key: (e: Entry) => String(e.name) },
 ];
 
 const SYSTEM = `You write the change note for a data refresh of the Tibia Equipment Optimizer, a fan site whose item, imbuement \

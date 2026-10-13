@@ -9,15 +9,21 @@ export interface FileChanges {
   editsOnly: number;
 }
 
+// Long values such as a creature's drop list are cut so one change stays one readable line.
+const show = (value: unknown) => {
+  const text = JSON.stringify(value);
+  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+};
+
 // Nested objects become "resist.fire"-style keys so a change reads as one line per value.
 function flatten(entry: Entry): Map<string, string> {
   const flat = new Map<string, string>();
   for (const [key, value] of Object.entries(entry)) {
     if (key === 'rev') continue;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      for (const [sub, v] of Object.entries(value)) flat.set(`${key}.${sub}`, JSON.stringify(v));
+      for (const [sub, v] of Object.entries(value)) flat.set(`${key}.${sub}`, show(v));
     } else {
-      flat.set(key, JSON.stringify(value));
+      flat.set(key, show(value));
     }
   }
   return flat;

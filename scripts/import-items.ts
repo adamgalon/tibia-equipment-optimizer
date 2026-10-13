@@ -1,8 +1,8 @@
-// Imports every equipment item, imbuement and creature from TibiaWiki into data/items.json, data/imbuements.json and data/creatures.json.
+// Imports equipment items, imbuements, creatures (with loot statistics) and hunting places from TibiaWiki into data/*.json.
 // Usage: npm run import:items
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { parseInfobox, toCreature, toImbuement, toItem } from '../src/lib/wiki.ts';
-import type { Creature, DataMeta, Imbuement, Item } from '../src/lib/types.ts';
+import { num, parseInfobox, parseLoot, toCreature, toHunt, toImbuement, toItem } from '../src/lib/wiki.ts';
+import type { Creature, DataMeta, Hunt, Imbuement, Item } from '../src/lib/types.ts';
 
 const API = 'https://tibia.fandom.com/api.php';
 const USER_AGENT = 'tibia-equipment-optimizer/0.1 (+https://github.com/adamgalon/tibia-equipment-optimizer)';
@@ -10,6 +10,8 @@ const USER_AGENT = 'tibia-equipment-optimizer/0.1 (+https://github.com/adamgalon
 const MIN_ITEMS = 1000;
 const MIN_IMBUEMENTS = 60;
 const MIN_CREATURES = 1500;
+const MIN_LOOT = 500;
+const MIN_HUNTS = 300;
 
 async function getJson(params: Record<string, string>): Promise<any> {
   const url = `${API}?${new URLSearchParams({ ...params, format: 'json', formatversion: '2', maxlag: '5' })}`;
@@ -29,19 +31,21 @@ async function getJson(params: Record<string, string>): Promise<any> {
   }
 }
 
-/** Serial requests, 50 pages each, over every page that uses the template; calls onPage with its parsed infobox. */
-async function eachInfobox(template: string, onPage: (fields: Record<string, string>, page: { title: string; rev: number }) => void) {
+type OnPage = (fields: Record<string, string>, page: { title: string; rev: number }, wikitext: string) => void;
+
+/** Serial requests, 50 pages each, over every page in the namespace that uses the template; calls onPage with its parsed infobox. */
+async function eachInfobox(template: string, onPage: OnPage, namespace = '0') {
   let cont: Record<string, string> = {};
   let requests = 0;
   do {
     const body = await getJson({
-      action: 'query', generator: 'embeddedin', geititle: `Template:${template}`, geinamespace: '0', geilimit: '50',
+      action: 'query', generator: 'embeddedin', geititle: `Template:${template}`, geinamespace: namespace, geilimit: '50',
       prop: 'revisions', rvprop: 'content|ids', rvslots: 'main', ...cont,
     });
     for (const page of body.query?.pages ?? []) {
       const rev = page.revisions?.[0];
       const fields = rev && parseInfobox(rev.slots.main.content, template);
-      if (fields) onPage(fields, { title: page.title, rev: rev.revid });
+      if (fields) onPage(fields, { title: page.title, rev: rev.revid }, rev.slots.main.content);
     }
     cont = body.continue ?? {};
     if (++requests % 25 === 0) console.log(`${template}: ${requests} requests so far`);
@@ -72,7 +76,11 @@ function writeIfChanged(file: string, key: string, entries: object[]) {
 // Items: every page that uses the object infobox (~10,000 pages, ~200 requests).
 const items = new Map<number, Item>();
 const skipped: string[] = [];
+// Every object with an ID, wearable or not, by name and page title: loot statistics name their drops this way.
+const objects = new Map<string, { id: number; npc: number }>();
 const itemRequests = await eachInfobox('Infobox Object', (fields, page) => {
+  const id = num(fields.itemid);
+  if (id !== undefined) for (const name of [fields.name, page.title]) if (name && !objects.has(name)) objects.set(name, { id, npc: num(fields.npcvalue) ?? 0 });
   const item = toItem(fields, page);
   if (!item) {
     if (fields.objectclass === 'Body Equipment' || fields.objectclass === 'Weapons') skipped.push(page.title);
@@ -102,10 +110,39 @@ await eachInfobox('Infobox Creature', (fields, page) => {
 });
 console.log(`Parsed ${creatures.length} creatures; ${creaturesSkipped} pages skipped (removed, or no hit points, damage or experience).`);
 
+// Loot statistics live in their own namespace (112, "Loot Statistics:"); drops are kept by item ID with their NPC value.
+const byCreature = new Map(creatures.map((c) => [c.name, c]));
+let lootPages = 0;
+await eachInfobox('Loot2', (_fields, page, wikitext) => {
+  const loot = parseLoot(wikitext);
+  const creature = byCreature.get(loot?.name ?? page.title.replace(/^Loot Statistics:/, ''));
+  if (!loot || !creature) return;
+  const drops = loot.drops.flatMap(([name, perKill]): [number, number, number][] => {
+    const object = objects.get(name);
+    return object ? [[object.id, perKill, object.npc]] : [];
+  });
+  creature.loot = { kills: loot.kills, drops };
+  lootPages++;
+}, '112');
+console.log(`Attached loot statistics to ${lootPages} creatures.`);
+
+// Hunting pages sometimes write "troll" or "Carrion_Worm"; those still mean the creature page.
+const canonical = new Map(creatures.map((c) => [c.name.toLowerCase(), c.name]));
+const hunts: Hunt[] = [];
+await eachInfobox('Infobox Hunt', (fields, page, wikitext) => {
+  const hunt = toHunt(fields, wikitext, page);
+  hunt.creatures = [...new Set(hunt.creatures.map((n) => canonical.get(n.replace(/_/g, ' ').toLowerCase()) ?? n))];
+  hunts.push(hunt);
+});
+console.log(`Parsed ${hunts.length} hunting places.`);
+
 // Check all before writing any, so a broken run never leaves the files out of step.
+if (lootPages < MIN_LOOT) throw new Error(`Only ${lootPages} creatures got loot statistics; keeping the existing data files.`);
+if (hunts.length < MIN_HUNTS) throw new Error(`Only ${hunts.length} hunting places parsed; keeping the existing data files.`);
 if (items.size < MIN_ITEMS) throw new Error(`Only ${items.size} items parsed; keeping the existing data files.`);
 if (imbuements.length < MIN_IMBUEMENTS) throw new Error(`Only ${imbuements.length} imbuements parsed; keeping the existing data files.`);
 if (creatures.length < MIN_CREATURES) throw new Error(`Only ${creatures.length} creatures parsed; keeping the existing data files.`);
 writeIfChanged('items.json', 'items', [...items.values()].sort((a, b) => a.name.localeCompare(b.name)));
 writeIfChanged('imbuements.json', 'imbuements', imbuements.sort((a, b) => a.name.localeCompare(b.name)));
 writeIfChanged('creatures.json', 'creatures', creatures.sort((a, b) => a.name.localeCompare(b.name)));
+writeIfChanged('hunts.json', 'hunts', hunts.sort((a, b) => a.name.localeCompare(b.name)));

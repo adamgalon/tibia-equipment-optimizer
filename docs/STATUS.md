@@ -1,7 +1,7 @@
 # Project status
 
 **Updated:** 2026-10-13  
-**Current step:** 4 — prices and budget (done); step 5, experience and loot, is next  
+**Current step:** all five steps are done; next is closing known gaps  
 **Plan and stack:** see `decisions/0002-static-app-and-five-step-plan.md`
 
 ## Steps
@@ -13,7 +13,7 @@
 | 2 | Build editor: 10 slots, totals, forge tier and imbuement inputs, saved builds | Done (Weapon Proficiency perks moved to a later step) |
 | 3 | Hunt advisor: creature damage elements, protection per slot, attack element | Done |
 | 4 | Prices and budget: community/manual prices per world, upgrade per gold | Done |
-| 5 | Experience and loot per creature and hunting place | Next |
+| 5 | Experience and loot per creature and hunting place | Done |
 
 ## Step 1 outcome
 
@@ -48,6 +48,14 @@
 - The build editor shows each worn item's price and the build value. The hunt advisor shows prices next to the best protection and lists "upgrades per gold": items that block more of the hunt's damage than the worn one, by gain per gold, within an optional budget. Weapons, ammunition and items with charges are left out of that list; items with charges or a wear-out duration are tagged ("5 charges", "60 minutes"). The importer now keeps `charges` and `duration` for that (24 and 141 items).
 - Verification: 49 unit tests, typecheck and production build pass. Checked in headless Edge against the live API for Antica: no request before opting in, 1,180 prices loaded, build value checked by hand, own price saved per world, budget filter, no new request after a reload, phone layout in Polish.
 
+## Step 5 outcome (2026-10-13)
+
+- The importer reads the newest `{{Loot2}}` block of each "Loot Statistics:" page (namespace 112) and attaches it to its creature: drops by item ID with the average amount per kill and the item's NPC value (from every object page, wearable or not). 1,258 creatures have loot statistics.
+- It also reads the 443 `Infobox Hunt` pages into `data/hunts.json`: city, the wiki's experience and loot ratings (stars, or the words the template maps to stars; 321 places are rated), recommended level for knights, paladins and mages, and the creatures from the page's `{{CreatureList}}` blocks (names matched regardless of case and underscores; 28 names with no creature page are dropped).
+- Hunt advisor: pick a hunting place to fill in its creatures (up to 12, the cap is now 12) and see its ratings and recommended levels, with a note that the wiki has no Monk recommendation. A table shows each creature's experience and loot value per kill; each drop counts at the better of its NPC price and the market or own price from step 4.
+- Creatures and hunting places load after the first paint as separate chunks (148 KB and 23 KB gzipped).
+- Verification: 52 unit tests, typecheck and production build pass. Checked in headless Edge with Claustrophobic Inferno (typed as "claustro"); the table matched the data (Infernal Demon 17,430 experience, 6.64k loot per kill at NPC prices).
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
@@ -70,6 +78,7 @@
 - Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection only: armor, defense and mitigation, which also cut physical hits, are not modelled.
 - "Best protection" ranks items by their own protections only, without imbuements or forge tiers, and charged items such as Stone Skin Amulet and Might Ring rank high although their charges run out.
 - "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
+- Experience and loot are per kill only: without kills per hour or spawn sizes there is no per-hour estimate. Some loot statistics rest on few kills (Infernal Demon: 240), and the wiki's hunting place ratings and levels are community opinions.
 - Prices are for the base item: whether Tibia Market tracks forged (tiered) copies separately is unknown, and imbuements are not priced. Community data can be weeks old on some worlds; each price shows its age.
 - "Upgrades per gold" counts protection only, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
 - Saved builds cannot be shared by link or exported yet.

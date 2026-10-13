@@ -143,6 +143,23 @@ const en: Record<string, string> = {
   upgradesHint:
     "Items that block more of this hunt's damage than what you wear, most gain per gold first. Only protection counts here, not armor or skills. Items with charges are left out; timed rings show how long they last.",
   charges: "{n} charges",
+  // Experience and loot
+  huntingPlace: "Hunting place",
+  loadPlace: "Load",
+  placeNotFound: 'No hunting place called "{name}".',
+  placeTrimmed: "This place has more creatures than fit; the first {n} were added.",
+  expRating: "experience",
+  lootRating: "loot",
+  stars: "{n} of 5",
+  placeLevels:
+    "Recommended level on TibiaWiki: knights {knight}, paladins {paladin}, mages {mage}. The wiki has no Monk recommendation.",
+  perKill: "Experience and loot per kill",
+  "col.creature": "Creature",
+  "col.exp": "Experience",
+  "col.lootPerKill": "Loot per kill",
+  "col.kills": "Kills counted",
+  perKillHint:
+    "Loot is the average of TibiaWiki's loot statistics; each drop counts at the better of its NPC price and its market or your own price. — means no statistics; few kills counted means a rough average.",
   footerPrices:
     "Community prices come from a third-party service, not from CipSoft:",
   // Stats
@@ -355,6 +372,22 @@ const pl: Record<string, string> = {
   upgradesHint:
     "Przedmioty, które blokują więcej obrażeń z tego polowania niż to, co nosisz; najpierw największy zysk za złoto. Liczy się tu tylko ochrona, nie pancerz ani umiejętności. Przedmioty z ładunkami są pominięte; przy pierścieniach na czas widać, jak długo działają.",
   charges: "ładunki: {n}",
+  huntingPlace: "Miejsce polowania",
+  loadPlace: "Wczytaj",
+  placeNotFound: 'Nie ma miejsca polowania o nazwie "{name}".',
+  placeTrimmed: "To miejsce ma więcej potworów, niż się mieści; dodano pierwsze {n}.",
+  expRating: "doświadczenie",
+  lootRating: "łup",
+  stars: "{n} z 5",
+  placeLevels:
+    "Zalecany poziom według TibiaWiki: rycerze {knight}, paladyni {paladin}, magowie {mage}. Wiki nie podaje zaleceń dla mnichów.",
+  perKill: "Doświadczenie i łup za zabicie",
+  "col.creature": "Potwór",
+  "col.exp": "Doświadczenie",
+  "col.lootPerKill": "Łup za zabicie",
+  "col.kills": "Policzone zabicia",
+  perKillHint:
+    "Łup to średnia ze statystyk łupu TibiaWiki; każdy przedmiot liczy się po wyższej z cen: u NPC albo rynkowej lub twojej. — oznacza brak statystyk; mało policzonych zabić to tylko przybliżenie.",
   footerPrices:
     "Ceny społeczności pochodzą z zewnętrznego serwisu, nie od CipSoft:",
   level: "Wymagany poziom",

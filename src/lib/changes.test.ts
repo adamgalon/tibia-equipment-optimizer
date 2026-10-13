@@ -31,6 +31,8 @@ describe('data change list', () => {
     expect(describeChanges([{ title: 'Items', changes }, { title: 'Creatures', changes: none }])).toBe(
       'Items: 1 added, 1 removed, 1 changed, 1 wiki edits without value changes\n+ Moonsilver Axe\n- Old Helmet\n~ Falcon Plate: armor 18 → 19; resist.fire — → 5',
     );
+    const drops = diffEntries([{ name: 'Rat', loot: { drops: [[1, 1, 1]] } }], [{ name: 'Rat', loot: { drops: Array(30).fill([3031, 12.5, 1]) } }], byName);
+    expect(drops.changed[0].fields[0]).toMatch(/^loot\.drops \[\[1,1,1\]\] → \[\[3031,12\.5,1\],.{30,}…$/);
     const many = diffEntries([], Array.from({ length: 5 }, (_, i) => ({ name: `C${i}` })), byName);
     expect(describeChanges([{ title: 'Creatures', changes: many }], 2)).toBe('Creatures: 5 added, 0 removed, 0 changed, 0 wiki edits without value changes\n+ C0\n+ C1\n… and 3 more');
   });

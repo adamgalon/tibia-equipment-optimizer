@@ -1,5 +1,5 @@
 import { ATTACK_ELEMENTS, VOCATIONS } from './types.ts';
-import type { Creature, Element, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
+import type { Creature, Element, Hunt, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
 
 /** Wiki item type -> equipment slot. Types not listed (exercise weapons, quest items, ...) are not equipment. */
 const SLOT_BY_TYPE: Record<string, Slot> = {
@@ -259,6 +259,39 @@ export function toCreature(fields: Record<string, string>, page: { title: string
   if (creature.hp === undefined) delete creature.hp;
   if (creature.exp === undefined) delete creature.exp;
   return creature;
+}
+
+/**
+ * The first {{Loot2}} block of a "Loot Statistics:" page (the newest game version comes first):
+ * kills counted, and per item name the average amount dropped per kill ("|Gold Coin, times:..., total:898175").
+ */
+export function parseLoot(wikitext: string): { name?: string; kills: number; drops: [string, number][] } | null {
+  const block = /\{\{Loot2([^{}]*)\}\}/.exec(wikitext)?.[1];
+  const kills = num(/\|\s*kills\s*=([^|\n]*)/.exec(block ?? '')?.[1]);
+  if (!block || !kills) return null;
+  const drops: [string, number][] = [...block.matchAll(/\|([^|=\n]+?),\s*times:[^|\n]*?total:\s*(\d+)/g)]
+    .map(([, item, total]) => [item.trim(), Number((Number(total) / kills).toPrecision(4))]);
+  return { name: /\|\s*name\s*=([^|\n]*)/.exec(block)?.[1].trim(), kills, drops };
+}
+
+/** Converts an Infobox Hunt page into a Hunt; its creatures come from the page's {{CreatureList}} blocks. */
+export function toHunt(fields: Record<string, string>, wikitext: string, page: { title: string; rev: number }): Hunt {
+  const creatures = [...wikitext.matchAll(/\{\{CreatureList([^{}]*)\}\}/g)]
+    .flatMap(([, body]) => body.split('|').map((p) => cleanMarkup(p)).filter((p) => p && !p.includes('=')));
+  const level: Hunt['level'] = {};
+  for (const [field, group] of [['lvlknights', 'knight'], ['lvlpaladins', 'paladin'], ['lvlmages', 'mage']] as const) {
+    const value = num(fields[field]);
+    if (value) level[group] = value;
+  }
+  // Pages rate with stars or words; Template:Infobox Hunt maps the words to the same 1-5 scale.
+  const rating = (stars: string | undefined, word: string | undefined) =>
+    num(stars) ?? ({ 'very bad': 1, bad: 2, average: 3, good: 4, 'very good': 5 } as Record<string, number>)[word?.toLowerCase() ?? ''];
+  const hunt: Hunt = {
+    name: page.title, city: fields.city, exp: rating(fields.expstar, fields.exp), loot: rating(fields.lootstar, fields.loot),
+    level, creatures: [...new Set(creatures)], rev: page.rev,
+  };
+  for (const key of ['city', 'exp', 'loot'] as const) if (hunt[key] === undefined) delete hunt[key];
+  return hunt;
 }
 
 /** Converts Infobox Imbuement fields into an Imbuement, or null for effects the app does not model (e.g. capacity). */

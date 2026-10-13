@@ -100,10 +100,30 @@ export interface Creature {
   /** Damage it takes per attack element in %, only where it differs from the normal 100%. */
   takes: Partial<Record<Element, number>>;
   boss?: true;
+  /** From TibiaWiki loot statistics: kills counted, and per drop [item ID, average amount per kill, NPC value]. */
+  loot?: { kills: number; drops: [number, number, number][] };
   rev: number;
 }
 
 export interface CreatureData {
   meta: DataMeta;
   creatures: Creature[];
+}
+
+export interface Hunt {
+  /** Wiki page title. */
+  name: string;
+  city?: string;
+  /** The wiki's experience and loot ratings, 1-5 stars. */
+  exp?: number;
+  loot?: number;
+  /** Recommended level per vocation group; the wiki has no Monk column. */
+  level: Partial<Record<'knight' | 'paladin' | 'mage', number>>;
+  creatures: string[];
+  rev: number;
+}
+
+export interface HuntData {
+  meta: DataMeta;
+  hunts: Hunt[];
 }

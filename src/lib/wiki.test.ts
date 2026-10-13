@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAttributes, parseDamage, parseInfobox, parseResist, parseVocations, toCreature, toImbuement, toItem } from './wiki.ts';
+import { parseAttributes, parseDamage, parseInfobox, parseLoot, parseResist, parseVocations, toCreature, toHunt, toImbuement, toItem } from './wiki.ts';
 
 const page = (fields: string) => `{{Infobox Object|List={{{1|}}}|GetValue={{{GetValue|}}}\n${fields}\n}}\nSome article text.`;
 const item = (fields: string, title = 'Test') => toItem(parseInfobox(page(fields))!, { title, rev: 1 });
@@ -113,6 +113,23 @@ describe('creatures', () => {
     expect(toCreature({ hp: '?', isboss: 'yes', maxdmg: '{{Max Damage|death=2000}}' }, { title: 'Boss', rev: 1 }))
       .toEqual({ name: 'Boss', damage: { death: 2000 }, takes: {}, boss: true, rev: 1 });
     expect(toCreature({ hp: '?', exp: '0' }, { title: 'Pillar', rev: 1 })).toBeNull();
+  });
+});
+
+describe('loot and hunting places', () => {
+  it('reads the newest loot block as average amounts per kill', () => {
+    const page = '__NOWYSIWYG__\n{{Loot2\n|version=14.12\n|kills=200\n|name=Demon\n|Gold Coin, times:200, amount:1-100, total:10000\n|Demon Horn, times:50, amount:1, total:50\n}}\n{{Loot2\n|kills=5\n|name=Demon\n|Old Item, times:1, total:1\n}}';
+    expect(parseLoot(page)).toEqual({ name: 'Demon', kills: 200, drops: [['Gold Coin', 50], ['Demon Horn', 0.25]] });
+    expect(parseLoot('{{Loot2\n|kills=0\n}}')).toBeNull();
+  });
+
+  it('reads ratings, levels and every creature list of a hunting place', () => {
+    const page = '{{Infobox Hunt\n| city = Rookgaard\n| lvlknights = 6\n| lvlpaladins = \n| expstar = 1\n| lootstar = 2\n}}\n== Creatures ==\n{{CreatureList|type=List/Sorted\n |Wolf\n |[[Orc]]\n}}\n{{CreatureList\n |Orc\n |Minotaur\n}}';
+    expect(toHunt(parseInfobox(page, 'Infobox Hunt')!, page, { title: 'Minotaur Hell', rev: 3 })).toEqual({
+      name: 'Minotaur Hell', city: 'Rookgaard', exp: 1, loot: 2, level: { knight: 6 }, creatures: ['Wolf', 'Orc', 'Minotaur'], rev: 3,
+    });
+    const worded = '{{Infobox Hunt\n| exp = Very Good\n| loot = average\n}}';
+    expect(toHunt(parseInfobox(worded, 'Infobox Hunt')!, worded, { title: 'X', rev: 1 })).toMatchObject({ exp: 5, loot: 3 });
   });
 });
 

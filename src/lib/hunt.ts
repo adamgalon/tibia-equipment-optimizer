@@ -21,6 +21,12 @@ export function attackElements(creatures: Creature[]): { element: Element; takes
     .sort((a, b) => b.takes - a.takes);
 }
 
+/** Average loot value per kill: each drop at the better of its NPC value and its price (market or the player's own). */
+export function lootPerKill(creature: Creature, priceOf: (id: number) => number | undefined = () => undefined): number | undefined {
+  if (!creature.loot) return undefined;
+  return Math.round(creature.loot.drops.reduce((sum, [id, perKill, npc]) => sum + perKill * Math.max(npc, priceOf(id) ?? 0), 0));
+}
+
 /** Share (%) of the incoming damage an item blocks on its own: each protection weighted by how hard its element hits. */
 export function blockedShare(item: Item, incoming: Incoming[]): number {
   const total = incoming.reduce((sum, d) => sum + d.max, 0);
