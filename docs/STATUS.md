@@ -28,9 +28,13 @@
 - Totals add armor, skills, speed, crit, leech, reflection, mantra and imbuement slots. Protections combine one source after another (TibiaWiki "Formulae", rev 1205374): 10% and 10% give 19%.
 - A two-handed weapon and a shield or spellbook cannot be worn together: the newest pick wins and the page says what was taken off. Quivers stay next to two-handed distance weapons (TibiaWiki "Quivers"). Clashing options are marked in the dropdown.
 - Forge tier per item, capped by its classification. Totals show Onslaught, Ruse, Momentum and Transcendence chances, raised by the boots' Amplification; the per-tier tables come from the TibiaWiki effect pages and match the wiki's Amplification examples.
-- Imbuements: the importer also reads the 69 `Infobox Imbuement` pages into `data/imbuements.json` (Featherweight is skipped; it only fits containers). Each item offers as many imbuements as it has slots, following the TibiaWiki Imbuing page rules: one imbuement of each type, one elemental damage imbuement at most, and none for a stat the item already has (elemental damage, protection, skill, speed or life leech), except Swiftness on Pair of Soulwalkers and Pair of Soulstalkers.
+- Imbuements: the importer also reads the 69 `Infobox Imbuement` pages into `data/imbuements.json` (Featherweight is skipped; it only fits containers). Each item offers as many imbuements as it has slots, following the TibiaWiki Imbuing page rules: one imbuement of each type, one elemental damage imbuement at most, and none for a stat the item already has (elemental damage, protection, skill or speed), except Swiftness on Pair of Soulwalkers and Pair of Soulstalkers.
 - The current build and named saved builds are kept in browser storage and checked on load: unknown items, tiers above the cap and imbuements that no longer fit are dropped. Builds saved before forge tiers still load.
 - Verification: 30 unit tests, typecheck and production build pass. Checked in headless Edge at 1280 px (English) and 390 px (Polish) with a forged and imbued level-400 knight build, including imbuements the rules must refuse; totals were checked by hand.
+
+## Open questions
+
+- Can a weapon with its own life leech (for example Soulcutter, 2%) take Vampirism? TibiaWiki's Imbuing page says no. The app allows it until the owner checks in the game (raised 2026-10-13). If the game says no, add `lifeLeech` back to the blocked stats in `hasOwn` in `src/lib/build.ts` and flip its test.
 
 ## Known gaps
 

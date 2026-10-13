@@ -62,6 +62,11 @@ describe('imbuement rules', () => {
     expect(canImbue(armor, lichShroud, [lichShroud])).toBe(false);
     expect(canImbue(bow, vampirism, [scorch])).toBe(true);
   });
+
+  it('allows Vampirism on a weapon with its own life leech until that is checked in the game', () => {
+    const leechSword: Item = { ...base, id: 23, name: 'Leech Sword', slot: 'weapon', type: 'Sword Weapons', hands: 1, imbueSlots: 2, lifeLeech: 2 };
+    expect(canImbue(leechSword, vampirism, [])).toBe(true);
+  });
 });
 
 describe('two-handed weapons', () => {

@@ -86,11 +86,14 @@ const kinds = (item: Item) => [...(KINDS[item.type] ?? []), ...(item.type === 'H
 const SWIFTNESS_EXCEPTIONS = new Set(['Pair of Soulwalkers', 'Pair of Soulstalkers']);
 const converts = (i: Imbuement) => Object.keys(i.effects).some((key) => key.startsWith('convert.'));
 
-/** TibiaWiki "Imbuing": an item's own elemental damage, protection, skill, speed or life leech blocks the matching imbuement. */
+/**
+ * TibiaWiki "Imbuing": an item's own elemental damage, protection, skill or speed blocks the matching imbuement.
+ * The page also bars Vampirism from weapons with their own life leech; that rule waits for an in-game check (docs/STATUS.md).
+ */
 function hasOwn(item: Item, key: string): boolean {
   if (key.startsWith('convert.')) return !!item.elementAttack;
   if (key === 'speed' && SWIFTNESS_EXCEPTIONS.has(item.name)) return false;
-  return /^(resist\.|skill\.|speed$|lifeLeech$)/.test(key) && ROW_BY_KEY.get(key)?.get(item) !== undefined;
+  return /^(resist\.|skill\.|speed$)/.test(key) && ROW_BY_KEY.get(key)?.get(item) !== undefined;
 }
 
 /** Whether an imbuement fits the item next to the others on it: one of each type, and one damage conversion at most. */
