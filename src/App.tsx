@@ -11,7 +11,7 @@ import { HuntAdvisor } from './app/HuntAdvisor.tsx';
 
 export default function App() {
   const app = useApp();
-  const { lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, market, t, filtered, attack, best, compared, rows, toggleCompare } = app;
+  const { lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, market, t, filtered, attack, best, compared, rows, toggleCompare, character, setCharacter, characterStatus, lookUpCharacter } = app;
 
   return (
     <div className="page">
@@ -26,6 +26,15 @@ export default function App() {
           ))}
         </div>
       </header>
+
+      <form className="filters character" onSubmit={lookUpCharacter}>
+        <label className="grow">
+          {t('character')}
+          <input value={character} onChange={(e) => setCharacter(e.target.value)} placeholder="Bubble" />
+        </label>
+        <button type="submit">{t('lookUp')}</button>
+        {characterStatus && <p className="muted small" role="status">{characterStatus}</p>}
+      </form>
 
       <section className="filters" aria-label={t('sortBy')}>
         <label className="grow">

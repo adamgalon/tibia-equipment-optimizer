@@ -21,6 +21,27 @@ export function attackElements(creatures: Creature[]): { element: Element; takes
     .sort((a, b) => b.takes - a.takes);
 }
 
+/** Average physical damage armor absorbs from one hit: TibiaWiki "Formulae" draws it from floor(t/2) to floor(t/2)*2-1, never below 0. */
+export function armorReduction(armor: number): number {
+  const min = Math.floor(armor / 2);
+  const max = min * 2 - 1;
+  return max <= 0 ? 0 : (min + max) / 2;
+}
+
+/** Damage left of a hit after the build's protection and, for physical hits, its armor (applied after protection, as the wiki's example does). */
+export const damageTaken = (hit: number, protection: number, element: Element, armor: number) =>
+  Math.max(0, Math.round(Math.floor(hit * (1 - protection / 100)) - (element === 'physical' ? armorReduction(armor) : 0)));
+
+/**
+ * Experience and loot per hour at a kill rate spread evenly over the creatures. Experience is the wiki's base value
+ * (no stamina, prey or event bonus); creatures without loot statistics add no loot.
+ */
+export function perHour(creatures: Creature[], killsPerHour: number, lootOf: (c: Creature) => number | undefined) {
+  if (!creatures.length || !(killsPerHour > 0)) return undefined;
+  const average = (value: (c: Creature) => number) => (creatures.reduce((sum, c) => sum + value(c), 0) / creatures.length) * killsPerHour;
+  return { exp: Math.round(average((c) => c.exp ?? 0)), loot: Math.round(average((c) => lootOf(c) ?? 0)) };
+}
+
 /** Average loot value per kill: each drop at the better of its NPC value and its price (market or the player's own). */
 export function lootPerKill(creature: Creature, priceOf: (id: number) => number | undefined = () => undefined): number | undefined {
   if (!creature.loot) return undefined;

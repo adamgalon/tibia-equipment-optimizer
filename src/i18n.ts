@@ -108,7 +108,7 @@ const en: Record<string, string> = {
   "col.yourProtection": "Your protection",
   "col.youTake": "You take",
   incomingHint:
-    "Highest hits as TibiaWiki lists them, after your build's protection. Armor and defense also reduce physical hits; they are not counted here.",
+    "Highest hits as TibiaWiki lists them, after your build's protection and, for physical hits, its armor (on average). Shield defense and mitigation are not counted.",
   noDamageData: "TibiaWiki lists no damage for these creatures.",
   attackWith: "Attack with",
   attackHint: "Damage they take from each element; 100% is normal.",
@@ -166,6 +166,14 @@ const en: Record<string, string> = {
   "col.exp": "Experience",
   "col.lootPerKill": "Loot per kill",
   "col.kills": "Kills counted",
+  killsPerHour: "Kills per hour",
+  perHourResult: "About {exp} experience and {loot} loot per hour.",
+  perHourHint: "Your kills per hour, spread evenly over the creatures above. Base experience, without stamina, prey or event bonuses; creatures without loot statistics add no loot.",
+  character: "Character",
+  lookUp: "Look up",
+  characterLoading: "Looking up the character…",
+  characterFound: "{name}: level {level} {vocation} on {world}. Vocation and level filters set.",
+  characterNotFound: "No character called \"{name}\" was found, or TibiaData is unavailable.",
   perKillHint:
     "Loot is the average of TibiaWiki's loot statistics; each drop counts at the better of its NPC price and its market or your own price. — means no statistics; few kills counted means a rough average.",
   footerPrices:
@@ -346,7 +354,7 @@ const pl: Record<string, string> = {
   "col.yourProtection": "Twoja ochrona",
   "col.youTake": "Otrzymasz",
   incomingHint:
-    "Najmocniejsze ciosy według TibiaWiki, po uwzględnieniu ochron zestawu. Pancerz i obrona też zmniejszają ciosy fizyczne; tu nie są liczone.",
+    "Najmocniejsze ciosy według TibiaWiki, po uwzględnieniu ochron zestawu, a przy ciosach fizycznych także pancerza (średnio). Obrona tarczy i mitygacja nie są liczone.",
   noDamageData: "TibiaWiki nie podaje obrażeń tych potworów.",
   attackWith: "Atakuj żywiołem",
   attackHint: "Obrażenia, jakie otrzymują od każdego żywiołu; 100% to wartość normalna.",
@@ -402,6 +410,14 @@ const pl: Record<string, string> = {
   "col.exp": "Doświadczenie",
   "col.lootPerKill": "Łup za zabicie",
   "col.kills": "Policzone zabicia",
+  killsPerHour: "Zabicia na godzinę",
+  perHourResult: "Około {exp} doświadczenia i {loot} łupu na godzinę.",
+  perHourHint: "Twoje zabicia na godzinę, rozłożone równo na powyższe potwory. Podstawowe doświadczenie, bez staminy, prey i bonusów z wydarzeń; potwory bez statystyk łupu nie dodają łupu.",
+  character: "Postać",
+  lookUp: "Szukaj",
+  characterLoading: "Wyszukiwanie postaci…",
+  characterFound: "{name}: poziom {level}, {vocation}, świat {world}. Ustawiono filtry profesji i poziomu.",
+  characterNotFound: "Nie znaleziono postaci „{name}” albo TibiaData jest niedostępne.",
   perKillHint:
     "Łup to średnia ze statystyk łupu TibiaWiki; każdy przedmiot liczy się po wyższej cenie: u NPC albo rynkowej (lub twojej). — oznacza brak statystyk; mało policzonych zabić to tylko przybliżenie.",
   footerPrices:

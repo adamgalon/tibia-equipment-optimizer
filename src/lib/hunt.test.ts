@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attackElements, bestProtection, blockedShare, incomingDamage, lootPerKill } from './hunt.ts';
+import { armorReduction, attackElements, bestProtection, blockedShare, damageTaken, incomingDamage, lootPerKill, perHour } from './hunt.ts';
 import type { Creature, Item } from './types.ts';
 
 const demon: Creature = { name: 'Demon', hp: 8200, damage: { physical: 500, fire: 250 }, takes: { fire: 0, holy: 112, ice: 112 }, rev: 1 };
@@ -28,6 +28,23 @@ describe('hunt advisor', () => {
     expect(blockedShare(fireArmor, incoming)).toBeCloseTo(5);
     expect(blockedShare(mixed, incoming)).toBeCloseTo(5);
     expect(blockedShare(fireArmor, [])).toBe(0);
+  });
+
+  it('takes off armor from physical hits after protection, matching the wiki example', () => {
+    // TibiaWiki "Formulae": a 200 hit against 5% and 6% items becomes 178, then armor 9 takes 4-7 off: 171-174.
+    expect(armorReduction(9)).toBe(5.5);
+    expect(armorReduction(1)).toBe(0);
+    expect(damageTaken(200, 100 * (1 - 0.95 * 0.94), 'physical', 9)).toBe(173);
+    expect(damageTaken(200, 10, 'fire', 9)).toBe(180);
+    expect(damageTaken(3, 0, 'physical', 52)).toBe(0);
+  });
+
+  it('turns kills per hour into experience and loot per hour, spread evenly over the creatures', () => {
+    const rich: Creature = { ...lord, exp: 2000, loot: { kills: 10, drops: [[1, 1, 1000]] } };
+    const poor: Creature = { ...demon, exp: 6000 };
+    expect(perHour([rich, poor], 100, (c) => lootPerKill(c))).toEqual({ exp: 400_000, loot: 50_000 });
+    expect(perHour([rich], 0, () => 1)).toBeUndefined();
+    expect(perHour([], 100, () => 1)).toBeUndefined();
   });
 
   it('values loot per kill at the better of NPC and market price', () => {

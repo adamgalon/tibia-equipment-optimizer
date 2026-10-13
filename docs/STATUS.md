@@ -65,6 +65,15 @@
 - Polish text: a review pass (not by a native speaker) fixed plural agreement ("1 dni temu", "1182 przedmiotów"), typographic quotes, gender agreement and phrasing. Prices now show the date they were seen instead of their age in days, in both languages.
 - Verification: 57 unit tests, typecheck and production build pass. Checked in headless Edge: the warning appears and clears, a "+1 Sword Fighting" perk raises the sword total from 22 to 23, a share link opened in a browser with another build loads the shared build with its perk and keeps the other one, and the Polish phone list shows cards without sideways scrolling.
 
+## Second round (2026-10-13)
+
+- `App.tsx` (971 lines) is split into `src/app/helpers.ts`, `useApp.tsx` (state and handlers), `BuildEditor.tsx` and `HuntAdvisor.tsx`; the code was moved, not rewritten.
+- Playwright smoke tests (`e2e/smoke.e2e.ts`, `npm run test:e2e`) run in the deploy workflow on the production build at desktop and phone sizes: catalog, build totals, hunt damage with armor, per-hour totals, share link, no sideways scrolling. They never call Tibia Market or TibiaData.
+- Character lookup: a name typed above the filters is looked up on TibiaData v4 (only on "Look up"); its vocation and level set the filters, and its world becomes the price world only if community prices are already in use. An unknown name and an outage look the same to the browser (TibiaData's 502 carries no CORS header), so they share one message.
+- "You take" now subtracts the build's armor from physical hits after protection, using the average of the wiki's range (floor(t/2) to floor(t/2)*2-1); the wiki's worked example (200 -> 171-174) gives 173.
+- Kills per hour: one number, spread evenly over the chosen creatures, gives experience and loot per hour (base experience; creatures without loot statistics add no loot).
+- Verification: 59 unit tests, 4 Playwright tests (desktop and phone), typecheck and build pass; the lookup was checked against TibiaData with a real and an unknown character.
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
@@ -83,10 +92,10 @@
 - Life leech, mana leech and crit from several sources are added together. No wiki page states how they combine.
 - Totals count equipment only. The 5% crit chance with 10% extra damage that every character has since Summer Update 2025, and Exaltation Overload event bonuses, are not included.
 - Build totals leave out defense (it comes from the shield or weapon, not a sum) and weapon attack; both are shown per item.
-- Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection only: armor, defense and mitigation, which also cut physical hits, are not modelled.
+- Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection and, for physical hits, average armor; shield defense and mitigation are not modelled.
 - "Best protection" ranks items by their own protections only, without imbuements or forge tiers, and charged items such as Stone Skin Amulet and Might Ring rank high although their charges run out.
 - "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
-- Experience and loot are per kill only: without kills per hour or spawn sizes there is no per-hour estimate. Some loot statistics rest on few kills (Infernal Demon: 240), and the wiki's hunting place ratings and levels are community opinions.
+- Per-hour figures spread the player's kills per hour evenly over the chosen creatures, ignoring spawn mixes. Some loot statistics rest on few kills (Infernal Demon: 240), and the wiki's hunting place ratings and levels are community opinions.
 - Prices are for the base item: whether Tibia Market tracks forged (tiered) copies separately is unknown, and imbuements are not priced. Community data can be weeks old on some worlds; each price shows its age.
 - "Upgrades per gold" counts protection only, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
 - The Polish text has had a careful review, but not yet by a native speaker.

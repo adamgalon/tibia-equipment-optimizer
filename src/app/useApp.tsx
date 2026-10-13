@@ -4,7 +4,7 @@ import type { FormEvent } from 'react';
 import data from '../../data/items.json';
 import { translate } from '../i18n.ts';
 import type { Lang } from '../i18n.ts';
-import { SLOTS } from '../lib/types.ts';
+import { SLOTS, VOCATIONS } from '../lib/types.ts';
 import type { Creature, CreatureData, Element, Hunt, HuntData, Imbuement, Item, Proficiency, ProficiencyData, Slot, Vocation } from '../lib/types.ts';
 import { perkEffects } from '../lib/proficiency.ts';
 import { visibleRows } from '../lib/stats.ts';
@@ -50,6 +50,9 @@ export function useApp() {
   const [marketStatus, setMarketStatus] = useState(''); // "loading" or the reason loading failed
   const [ownPrices, setOwnPrices] = useState<OwnPrices>(initialOwnPrices);
   const [budget, setBudget] = useState('');
+  const [killsPerHour, setKillsPerHour] = useState(() => { const k = readStored('killsPerHour'); return typeof k === 'string' ? k : ''; });
+  const [character, setCharacter] = useState('');
+  const [characterStatus, setCharacterStatus] = useState('');
 
   const t: T = (key, vars) => translate(lang, key, vars);
 
@@ -80,6 +83,7 @@ export function useApp() {
   useEffect(() => writeStored('place', place), [place]);
   useEffect(() => writeStored('world', world), [world]);
   useEffect(() => writeStored('prices', ownPrices), [ownPrices]);
+  useEffect(() => writeStored('killsPerHour', killsPerHour), [killsPerHour]);
 
   // Community prices are only fetched once the player has picked a world.
   useEffect(() => {
@@ -207,6 +211,26 @@ export function useApp() {
     setBuildName('');
   }
 
+  // TibiaData answers an unknown name with a 502 the browser cannot read (no CORS header), so "not found" and "unavailable" share one message.
+  async function lookUpCharacter(e: FormEvent) {
+    e.preventDefault();
+    const name = character.trim();
+    if (!name) return;
+    setCharacterStatus(t('characterLoading'));
+    try {
+      const res = await fetch(`https://api.tibiadata.com/v4/character/${encodeURIComponent(name)}`);
+      const found = res.ok ? (await res.json())?.character?.character : undefined;
+      if (typeof found?.name !== 'string' || !found.name) return setCharacterStatus(t('characterNotFound', { name }));
+      setVocation(VOCATIONS.find((v) => String(found.vocation).toLowerCase().includes(v)) ?? '');
+      if (Number.isInteger(found.level)) setLevel(String(found.level));
+      // The world only changes once community prices are in use: picking one is what sends a request to Tibia Market.
+      if (typeof found.world === 'string' && (world || worlds.length)) setWorld(found.world);
+      setCharacterStatus(t('characterFound', { name: found.name, level: found.level, vocation: found.vocation, world: found.world }));
+    } catch {
+      setCharacterStatus(t('characterNotFound', { name }));
+    }
+  }
+
   function loadWorlds() {
     setWorldsLoading(true);
     marketJson('/world_data')
@@ -272,7 +296,7 @@ export function useApp() {
   }
 
 
-  return { lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, setNotice, build, setBuild, shareUrl, setShareUrl, shareCopied, setShareCopied, saved, setSaved, buildName, setBuildName, buildNotice, setBuildNotice, creatures, setCreatures, creaturesFailed, setCreaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, setPlaces, proficiency, setProficiency, place, setPlace, placeQuery, setPlaceQuery, worlds, setWorlds, worldsLoading, setWorldsLoading, world, setWorld, market, setMarket, marketStatus, setMarketStatus, ownPrices, setOwnPrices, budget, setBudget, t, maxLevel, filtered, slotOptions, perkTable, chosenPerks, totals, vocationClash, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, wornPrices, buildValue, unpriced, anyPrice, upgrades, compared, rows, toggleCompare, wear, imbue, loadBuild, setPerk, shareBuild, saveBuild, loadWorlds, priceText, commitOwnPrice, findName, loadPlace, addCreature };
+  return { killsPerHour, setKillsPerHour, character, setCharacter, characterStatus, lookUpCharacter, lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, setNotice, build, setBuild, shareUrl, setShareUrl, shareCopied, setShareCopied, saved, setSaved, buildName, setBuildName, buildNotice, setBuildNotice, creatures, setCreatures, creaturesFailed, setCreaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, setPlaces, proficiency, setProficiency, place, setPlace, placeQuery, setPlaceQuery, worlds, setWorlds, worldsLoading, setWorldsLoading, world, setWorld, market, setMarket, marketStatus, setMarketStatus, ownPrices, setOwnPrices, budget, setBudget, t, maxLevel, filtered, slotOptions, perkTable, chosenPerks, totals, vocationClash, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, wornPrices, buildValue, unpriced, anyPrice, upgrades, compared, rows, toggleCompare, wear, imbue, loadBuild, setPerk, shareBuild, saveBuild, loadWorlds, priceText, commitOwnPrice, findName, loadPlace, addCreature };
 }
 
 export type AppState = ReturnType<typeof useApp>;

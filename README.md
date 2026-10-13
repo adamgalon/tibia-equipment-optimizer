@@ -12,6 +12,7 @@ A free web app for [Tibia](https://www.tibia.com) players to compare equipment a
 - Build editor (step 2): pick an item for each of the 10 slots, set its forge tier and imbuements, and see total armor, skills, protections and forge effect chances. Choose Weapon Proficiency perks for the weapon. Two-handed weapons take the shield off, and mixed-vocation builds get a warning. Builds are saved in your browser and can be shared by link.
 - Hunt advisor (step 3): pick the creatures you hunt and see their hardest hits per element and how much your build blocks, which element to attack them with, and the top 3 items per slot for that damage mix, with a button to wear each one.
 - Prices (step 4): optionally load community prices for your world, type your own ("30kk"), see your build's value and the upgrades that add the most protection per gold within a budget.
+- Look up your character to set vocation and level, and enter kills per hour to see experience and loot per hour.
 - Experience and loot (step 5): load a hunting place to fill in its creatures and see the wiki's ratings and recommended levels, plus each creature's experience and average loot value per kill from TibiaWiki's loot statistics.
 
 ## Roadmap
@@ -34,6 +35,7 @@ Requires Node.js 24 or newer.
 npm install
 npm run dev            # local dev server
 npm test               # unit tests
+npm run test:e2e       # browser smoke tests on the production build (run npm run build first)
 npm run build          # typecheck + production build into dist/
 npm run import:items   # refresh the item, imbuement, creature and hunting place data from TibiaWiki (~4 minutes)
 ```
@@ -46,4 +48,5 @@ Each data commit lists exactly what changed (`scripts/summarize-changes.ts`, als
 
 - Item, imbuement, creature, loot and hunting place data comes from [TibiaWiki](https://tibia.fandom.com/) and is licensed [CC BY-SA](https://www.fandom.com/licensing). Each entry keeps the wiki revision it was read from.
 - Community prices, when a player loads them, come from [Tibia Market](https://tibiamarket.top), a third-party service whose data is collected by a bot playing the game client. They are optional, show their age, and can be replaced by your own.
+- Character lookups go to [TibiaData](https://tibiadata.com/) only when you press "Look up".
 - Tibia is a trademark of CipSoft GmbH. This is a fan project, not affiliated with or endorsed by CipSoft. It uses no game graphics.

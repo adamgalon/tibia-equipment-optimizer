@@ -1,11 +1,13 @@
 // The hunt advisor: creatures and hunting places, incoming damage, attack elements, protection, upgrades, experience and loot.
-import { bestProtection, lootPerKill } from '../lib/hunt.ts';
+import { bestProtection, damageTaken, lootPerKill, perHour } from '../lib/hunt.ts';
 import { formatGold } from '../lib/prices.ts';
 import { stars, wikiUrl, protections, wearsOut } from './helpers.ts';
 import type { AppState } from './useApp.tsx';
 
 export function HuntAdvisor({ app }: { app: AppState }) {
-  const { lang, slot, element, notice, build, creatures, creaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, place, setPlace, placeQuery, setPlaceQuery, budget, setBudget, t, totals, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, anyPrice, upgrades, wear, loadPlace, addCreature } = app;
+  const { lang, slot, element, notice, build, creatures, creaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, place, setPlace, placeQuery, setPlaceQuery, budget, setBudget, t, totals, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, anyPrice, upgrades, wear, loadPlace, addCreature, killsPerHour, setKillsPerHour } = app;
+  const armorTotal = totals.find(({ row }) => row.key === 'armor')?.total ?? 0;
+  const hourly = perHour(hunted, Number(killsPerHour), (c) => lootPerKill(c, (id) => priceById(id)?.gold));
   return (
     <section className="hunt" aria-labelledby="hunt-title">
       <div className="compare-head">
@@ -81,7 +83,7 @@ export function HuntAdvisor({ app }: { app: AppState }) {
                             <th scope="row">{t(`el.${element}`)}</th>
                             <td className="num">{max}{hunted.length > 1 && <span className="muted small"> · {from}</span>}</td>
                             <td className="num">{protection}%</td>
-                            <td className="num">{Math.round(max * (1 - protection / 100))}</td>
+                            <td className="num">{damageTaken(max, protection, element, armorTotal)}</td>
                           </tr>
                         );
                       })}
@@ -117,6 +119,12 @@ export function HuntAdvisor({ app }: { app: AppState }) {
                 </table>
               </div>
               <p className="muted small">{t('perKillHint')}</p>
+              <label className="budget">
+                {t('killsPerHour')}
+                <input type="number" min={0} inputMode="numeric" value={killsPerHour} onChange={(e) => setKillsPerHour(e.target.value)} placeholder="300" />
+              </label>
+              {hourly && <p>{t('perHourResult', { exp: hourly.exp.toLocaleString(lang), loot: formatGold(hourly.loot) })}</p>}
+              <p className="muted small">{t('perHourHint')}</p>
               <h3>{t('attackWith')}</h3>
               <p>
                 {attack.map(({ element, takes }) => (

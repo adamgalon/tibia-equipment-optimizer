@@ -19,6 +19,10 @@ test('catalog, build totals, hunt advisor and share link work together', async (
   const hunt = page.locator('.hunt');
   await expect(hunt.getByRole('row', { name: /^fire/ })).toContainText('250');
   await expect(hunt.getByRole('row', { name: /^Demon/ })).toContainText('6,000');
+  // Spiritthorn Helmet's 12 armor takes about 8.5 off Demon's 500 physical hit; its 6% physical protection comes first.
+  await expect(hunt.getByRole('row', { name: /^physical/ })).toContainText('462');
+  await hunt.getByLabel('Kills per hour').fill('200');
+  await expect(hunt.getByText(/About 1,200,000 experience/)).toBeVisible();
 
   // A share link carries the build.
   await page.getByRole('button', { name: 'Copy link to this build' }).click();
