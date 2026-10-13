@@ -11,7 +11,7 @@ import { visibleRows } from '../lib/stats.ts';
 import { buildTotals, equip, fromStored, sharedVocations, toStored } from '../lib/build.ts';
 import type { Build, Worn } from '../lib/build.ts';
 import { attackElements, bestProtection, incomingDamage } from '../lib/hunt.ts';
-import { formatGold, marketPrice, parseGold, upgradesPerGold } from '../lib/prices.ts';
+import { formatGold, marketPrice, optimizeBuild, parseGold, upgradesPerGold } from '../lib/prices.ts';
 import type { Price } from '../lib/prices.ts';
 import { byId, imbuements, imbuementByName, MAX_COMPARE, PAGE, initialLang, readStored, writeStored, shareCode, sharedBuild, initialSaved, MAX_HUNT, initialHunt, marketJson, worldNames, cachedWorlds, cachedMarket, initialOwnPrices, initialCompare, sortValue, usable, vocationText, items } from './helpers.ts';
 import type { Sort, T, SavedBuild, OwnPrices } from './helpers.ts';
@@ -51,6 +51,12 @@ export function useApp() {
   const [ownPrices, setOwnPrices] = useState<OwnPrices>(initialOwnPrices);
   const [budget, setBudget] = useState('');
   const [killsPerHour, setKillsPerHour] = useState(() => { const k = readStored('killsPerHour'); return typeof k === 'string' ? k : ''; });
+  // Per-hour settings: bonuses, prey and boosted creature (by name), and supplies used per hour as typed ("1.2kk").
+  const [hourSettings, setHourSettings] = useState(() => {
+    const v = readStored('hourSettings') as Record<string, unknown> | null;
+    const text = (k: string) => (typeof v?.[k] === 'string' ? (v[k] as string) : '');
+    return { stamina: v?.stamina === true, xpBoost: v?.xpBoost === true, doubleXp: v?.doubleXp === true, prey: text('prey'), preyBonus: text('preyBonus') || '40', boosted: text('boosted'), supplies: text('supplies') };
+  });
   const [character, setCharacter] = useState('');
   const [characterStatus, setCharacterStatus] = useState('');
 
@@ -84,6 +90,7 @@ export function useApp() {
   useEffect(() => writeStored('world', world), [world]);
   useEffect(() => writeStored('prices', ownPrices), [ownPrices]);
   useEffect(() => writeStored('killsPerHour', killsPerHour), [killsPerHour]);
+  useEffect(() => writeStored('hourSettings', hourSettings), [hourSettings]);
 
   // Community prices are only fetched once the player has picked a world.
   useEffect(() => {
@@ -188,6 +195,18 @@ export function useApp() {
   function loadBuild(next: Build) {
     setBuild(next);
     setBuildNotice('');
+  }
+
+  // One vocation keeps the result wearable; the replaced build is saved first because new items start without tiers or imbuements.
+  function optimize() {
+    if (!vocation) return setHuntNotice(t('optimizeNeedsVocation'));
+    const worn = Object.fromEntries(SLOTS.flatMap((s) => (build[s] ? [[s, build[s].item]] : [])));
+    const picks = optimizeBuild(slotOptions, incoming, worn, (i) => priceById(i.id)?.gold, parseGold(budget));
+    const slots = SLOTS.filter((s) => picks[s]);
+    if (!slots.length) return setHuntNotice(t('optimizeNothing'));
+    setSaved([...saved, { name: `Before optimizing ${new Date().toLocaleString()}`, slots: toStored(build) }]);
+    setBuild(slots.reduce((next, s) => equip(next, s, picks[s]), build));
+    setHuntNotice(t('optimizeDone', { items: slots.map((s) => `${t(`slot.${s}`)}: ${picks[s]!.name}`).join(', ') }));
   }
 
   function setPerk(worn: Worn, level: number, choice: number) {
@@ -296,7 +315,7 @@ export function useApp() {
   }
 
 
-  return { killsPerHour, setKillsPerHour, character, setCharacter, characterStatus, lookUpCharacter, lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, setNotice, build, setBuild, shareUrl, setShareUrl, shareCopied, setShareCopied, saved, setSaved, buildName, setBuildName, buildNotice, setBuildNotice, creatures, setCreatures, creaturesFailed, setCreaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, setPlaces, proficiency, setProficiency, place, setPlace, placeQuery, setPlaceQuery, worlds, setWorlds, worldsLoading, setWorldsLoading, world, setWorld, market, setMarket, marketStatus, setMarketStatus, ownPrices, setOwnPrices, budget, setBudget, t, maxLevel, filtered, slotOptions, perkTable, chosenPerks, totals, vocationClash, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, wornPrices, buildValue, unpriced, anyPrice, upgrades, compared, rows, toggleCompare, wear, imbue, loadBuild, setPerk, shareBuild, saveBuild, loadWorlds, priceText, commitOwnPrice, findName, loadPlace, addCreature };
+  return { hourSettings, setHourSettings, optimize, killsPerHour, setKillsPerHour, character, setCharacter, characterStatus, lookUpCharacter, lang, setLang, query, setQuery, vocation, setVocation, slot, setSlot, level, setLevel, element, setElement, sort, setSort, showUnavailable, setShowUnavailable, limit, setLimit, compareIds, setCompareIds, notice, setNotice, build, setBuild, shareUrl, setShareUrl, shareCopied, setShareCopied, saved, setSaved, buildName, setBuildName, buildNotice, setBuildNotice, creatures, setCreatures, creaturesFailed, setCreaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, setPlaces, proficiency, setProficiency, place, setPlace, placeQuery, setPlaceQuery, worlds, setWorlds, worldsLoading, setWorldsLoading, world, setWorld, market, setMarket, marketStatus, setMarketStatus, ownPrices, setOwnPrices, budget, setBudget, t, maxLevel, filtered, slotOptions, perkTable, chosenPerks, totals, vocationClash, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, wornPrices, buildValue, unpriced, anyPrice, upgrades, compared, rows, toggleCompare, wear, imbue, loadBuild, setPerk, shareBuild, saveBuild, loadWorlds, priceText, commitOwnPrice, findName, loadPlace, addCreature };
 }
 
 export type AppState = ReturnType<typeof useApp>;

@@ -1,6 +1,7 @@
 import { blockedShare } from './hunt.ts';
 import type { Incoming } from './hunt.ts';
-import type { Item, Slot } from './types.ts';
+import { fitsTogether } from './build.ts';
+import type { Imbuement, Item, Slot } from './types.ts';
 
 /** A price in gold: a Tibia Market quote, or one the player typed in. */
 export interface Price { gold: number; kind: 'sale' | 'offer' | 'yours'; /** Unix ms when the market saw it. */ observed?: number }
@@ -16,6 +17,24 @@ export function marketPrice(value: unknown): { id: number; price: Price } | unde
   if (typeof v.month_average_sell === 'number' && v.month_average_sell > 0) return { id: v.id, price: { gold: v.month_average_sell, kind: 'sale', observed } };
   if (typeof v.sell_offer === 'number' && v.sell_offer > 0) return { id: v.id, price: { gold: v.sell_offer, kind: 'offer', observed } };
   return undefined;
+}
+
+/** Imbuing gold fee per level (TibiaWiki "Imbuing"); an imbuement lasts 20 hours of use. */
+export const IMBUING_FEE: Record<Imbuement['level'], number> = { Basic: 7_500, Intricate: 60_000, Powerful: 250_000 };
+
+/** Gold per hunting hour to keep imbuements up: fee plus priced materials over 20 hours; unpriced materials are counted, not guessed. */
+export function imbuementUpkeep(imbuements: Imbuement[], priceOf: (id: number) => number | undefined) {
+  let gold = 0;
+  let unpriced = 0;
+  for (const imbuement of imbuements) {
+    gold += IMBUING_FEE[imbuement.level];
+    for (const [id, amount] of imbuement.sources ?? []) {
+      const price = priceOf(id);
+      if (price) gold += price * amount;
+      else unpriced++;
+    }
+  }
+  return { perHour: Math.round(gold / 20), unpriced };
 }
 
 /** Reads gold as players write it: "30kk" = 30,000,000, "1.5kk", "850k", "1,200,000" or "1 200 000". */
@@ -53,4 +72,32 @@ export function upgradesPerGold(options: Record<Slot, Item[]>, incoming: Incomin
       return gain > 0 && gold && gold <= budget ? [{ slot, item, gain, gold }] : [];
     });
   }).sort((a, b) => b.gain / b.gold - a.gain / a.gold).slice(0, limit);
+}
+
+/**
+ * Items to put on for a hunt. Without a budget: in each slot the item that blocks the most of the hunt's damage, when it beats
+ * what is worn. With a budget: repeatedly the upgrade with the most gain per gold that still fits the remaining gold.
+ * Weapons, ammunition and charged items are never picked, and a shield is only picked if it fits the worn weapon.
+ */
+export function optimizeBuild(options: Record<Slot, Item[]>, incoming: Incoming[], worn: Partial<Record<Slot, Item>>,
+  priceOf: (item: Item) => number | undefined, budget?: number): Partial<Record<Slot, Item>> {
+  const current = { ...worn };
+  const fits = (slot: Slot, item: Item) => slot !== 'shield' || !current.weapon || fitsTogether(current.weapon, item);
+  const blocks = (item: Item | undefined) => (item ? blockedShare(item, incoming) : 0);
+  const picks: Partial<Record<Slot, Item>> = {};
+  if (budget === undefined) {
+    for (const [slot, items] of Object.entries(options) as [Slot, Item[]][]) {
+      if (slot === 'weapon' || slot === 'ammo') continue;
+      const best = items.filter((i) => !i.charges && fits(slot, i)).reduce<Item | undefined>((top, i) => (blocks(i) > blocks(top) ? i : top), undefined);
+      if (best && blocks(best) > blocks(current[slot])) picks[slot] = best;
+    }
+    return picks;
+  }
+  let left = budget;
+  for (;;) {
+    const next = upgradesPerGold(options, incoming, (s) => current[s], priceOf, left, Infinity).find((u) => fits(u.slot, u.item));
+    if (!next) return picks;
+    picks[next.slot] = current[next.slot] = next.item;
+    left -= next.gold;
+  }
 }

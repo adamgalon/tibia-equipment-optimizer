@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAttributes, parseDamage, parseInfobox, parseLoot, parseResist, parseVocations, toCreature, toHunt, toImbuement, toItem } from './wiki.ts';
+import { parseAttributes, parseDamage, parseInfobox, parseLoot, parseResist, parseSources, parseVocations, toCreature, toHunt, toImbuement, toItem } from './wiki.ts';
 
 const page = (fields: string) => `{{Infobox Object|List={{{1|}}}|GetValue={{{GetValue|}}}\n${fields}\n}}\nSome article text.`;
 const item = (fields: string, title = 'Test') => toItem(parseInfobox(page(fields))!, { title, rev: 1 });
@@ -141,6 +141,11 @@ describe('toImbuement', () => {
     expect(imbuement('| prefix = Powerful\n| type = Strike\n| effect = {{Imbuement Effect/Strike|40%|5%}}\n| slots = swords, Bows')).toEqual({
       name: 'Powerful Strike', type: 'Strike', level: 'Powerful', effects: { critExtra: 40, critChance: 5 }, fits: ['swords', 'bows'], rev: 1,
     });
+  });
+
+  it('reads imbuing materials', () => {
+    expect(parseSources('Green Dragon Leather: 20, Blazing Bone: 10, Draken Sulphur: 5')).toEqual([['Green Dragon Leather', 20], ['Blazing Bone', 10], ['Draken Sulphur', 5]]);
+    expect(parseSources(undefined)).toEqual([]);
   });
 
   it('skips effects the app does not model', () => {

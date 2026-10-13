@@ -1,7 +1,7 @@
 // Imports equipment items, imbuements, creatures (with loot statistics) and hunting places from TibiaWiki into data/*.json.
 // Usage: npm run import:items
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { num, parseInfobox, parseLoot, parseProficiency, toCreature, toHunt, toImbuement, toItem } from '../src/lib/wiki.ts';
+import { num, parseInfobox, parseLoot, parseProficiency, parseSources, toCreature, toHunt, toImbuement, toItem } from '../src/lib/wiki.ts';
 import type { Creature, DataMeta, Hunt, Imbuement, Item } from '../src/lib/types.ts';
 
 const API = 'https://tibia.fandom.com/api.php';
@@ -96,7 +96,12 @@ console.log(`Parsed ${items.size} items in ${itemRequests} requests; ${skipped.l
 const imbuements: Imbuement[] = [];
 await eachInfobox('Infobox Imbuement', (fields, page) => {
   const imbuement = toImbuement(fields, page);
-  if (imbuement) imbuements.push(imbuement);
+  if (imbuement) {
+    // Materials by item ID, so their market prices can count toward imbuing costs.
+    const sources = parseSources(fields.astralsources).flatMap(([name, n]): [number, number][] => (objects.has(name) ? [[objects.get(name)!.id, n]] : []));
+    if (sources.length) imbuement.sources = sources;
+    imbuements.push(imbuement);
+  }
   else console.log(`Imbuement page not modelled: ${page.title}`);
 });
 console.log(`Parsed ${imbuements.length} imbuements.`);

@@ -208,7 +208,7 @@ export default function App() {
           <a href={meta.sourceUrl} target="_blank" rel="noreferrer">TibiaWiki</a> · <a href={meta.licenseUrl} target="_blank" rel="noreferrer">{meta.license}</a>
         </p>
         {market && <p>{t('footerPrices')} <a href="https://tibiamarket.top" target="_blank" rel="noreferrer">Tibia Market</a></p>}
-        <p>{t('footerTrademark')}</p>
+        <p>{t('footerTrademark')} <a href="https://github.com/adamgalon/tibia-equipment-optimizer/issues/new" target="_blank" rel="noreferrer">{t('feedback')}</a></p>
       </footer>
     </div>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { armorReduction, attackElements, bestProtection, blockedShare, damageTaken, incomingDamage, lootPerKill, perHour } from './hunt.ts';
+import { armorReduction, attackElements, bestProtection, blockedShare, damageTaken, expMultiplier, incomingDamage, lootPerKill, perHour } from './hunt.ts';
 import type { Creature, Item } from './types.ts';
 
 const demon: Creature = { name: 'Demon', hp: 8200, damage: { physical: 500, fire: 250 }, takes: { fire: 0, holy: 112, ice: 112 }, rev: 1 };
@@ -45,6 +45,14 @@ describe('hunt advisor', () => {
     expect(perHour([rich, poor], 100, (c) => lootPerKill(c))).toEqual({ exp: 400_000, loot: 50_000 });
     expect(perHour([rich], 0, () => 1)).toBeUndefined();
     expect(perHour([], 100, () => 1)).toBeUndefined();
+  });
+
+  it('combines experience bonuses the way the wiki describes', () => {
+    expect(expMultiplier({})).toBe(1);
+    expect(expMultiplier({ stamina: true })).toBe(1.5);
+    // Double XP (+100%) and XP Boost (+50%) add up to +150%; stamina then multiplies.
+    expect(expMultiplier({ doubleXp: true, xpBoost: true })).toBe(2.5);
+    expect(expMultiplier({ doubleXp: true, xpBoost: true, stamina: true })).toBe(3.75);
   });
 
   it('values loot per kill at the better of NPC and market price', () => {

@@ -33,14 +33,21 @@ export const damageTaken = (hit: number, protection: number, element: Element, a
   Math.max(0, Math.round(Math.floor(hit * (1 - protection / 100)) - (element === 'physical' ? armorReduction(armor) : 0)));
 
 /**
- * Experience and loot per hour at a kill rate spread evenly over the creatures. Experience is the wiki's base value
- * (no stamina, prey or event bonus); creatures without loot statistics add no loot.
+ * Experience and loot per hour at a kill rate spread evenly over the creatures. Experience per kill comes from expOf
+ * (the wiki's base value unless bonuses are applied); creatures without loot statistics add no loot.
  */
-export function perHour(creatures: Creature[], killsPerHour: number, lootOf: (c: Creature) => number | undefined) {
+export function perHour(creatures: Creature[], killsPerHour: number, lootOf: (c: Creature) => number | undefined, expOf = (c: Creature) => c.exp ?? 0) {
   if (!creatures.length || !(killsPerHour > 0)) return undefined;
   const average = (value: (c: Creature) => number) => (creatures.reduce((sum, c) => sum + value(c), 0) / creatures.length) * killsPerHour;
-  return { exp: Math.round(average((c) => c.exp ?? 0)), loot: Math.round(average((c) => lootOf(c) ?? 0)) };
+  return { exp: Math.round(average(expOf)), loot: Math.round(average((c) => lootOf(c) ?? 0)) };
 }
+
+/**
+ * Experience multiplier from hunt-wide bonuses (TibiaWiki "Experience Point", "XP Boost"): event and XP Boost bonuses add up,
+ * and the premium stamina bonus multiplies the result. Prey and boosted creature apply per creature, on top of this.
+ */
+export const expMultiplier = (b: { stamina?: boolean; xpBoost?: boolean; doubleXp?: boolean }) =>
+  (1 + (b.xpBoost ? 0.5 : 0) + (b.doubleXp ? 1 : 0)) * (b.stamina ? 1.5 : 1);
 
 /** Average loot value per kill: each drop at the better of its NPC value and its price (market or the player's own). */
 export function lootPerKill(creature: Creature, priceOf: (id: number) => number | undefined = () => undefined): number | undefined {

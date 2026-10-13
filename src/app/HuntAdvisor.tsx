@@ -1,13 +1,22 @@
 // The hunt advisor: creatures and hunting places, incoming damage, attack elements, protection, upgrades, experience and loot.
-import { bestProtection, damageTaken, lootPerKill, perHour } from '../lib/hunt.ts';
-import { formatGold } from '../lib/prices.ts';
+import { bestProtection, damageTaken, expMultiplier, lootPerKill, perHour } from '../lib/hunt.ts';
+import { formatGold, imbuementUpkeep, parseGold } from '../lib/prices.ts';
 import { stars, wikiUrl, protections, wearsOut } from './helpers.ts';
+import type { Creature } from '../lib/types.ts';
 import type { AppState } from './useApp.tsx';
 
 export function HuntAdvisor({ app }: { app: AppState }) {
-  const { lang, slot, element, notice, build, creatures, creaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, place, setPlace, placeQuery, setPlaceQuery, budget, setBudget, t, totals, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, anyPrice, upgrades, wear, loadPlace, addCreature, killsPerHour, setKillsPerHour } = app;
+  const { lang, slot, element, notice, build, creatures, creaturesFailed, hunt, setHunt, creatureQuery, setCreatureQuery, huntNotice, setHuntNotice, places, place, setPlace, placeQuery, setPlaceQuery, budget, setBudget, t, totals, creatureOptions, hunted, incoming, attack, best, protectionAgainst, priceById, priceOf, currentPlace, placeOptions, anyPrice, upgrades, wear, loadPlace, addCreature, killsPerHour, setKillsPerHour, hourSettings, setHourSettings, optimize } = app;
   const armorTotal = totals.find(({ row }) => row.key === 'armor')?.total ?? 0;
-  const hourly = perHour(hunted, Number(killsPerHour), (c) => lootPerKill(c, (id) => priceById(id)?.gold));
+  const hs = hourSettings;
+  const setHs = (change: Partial<typeof hs>) => setHourSettings({ ...hs, ...change });
+  // Prey and the boosted creature apply to one creature each; a boosted creature also drops twice the loot.
+  const lootOf = (c: Creature) => (lootPerKill(c, (id) => priceById(id)?.gold) ?? 0) * (c.name === hs.boosted ? 2 : 1);
+  const expOf = (c: Creature) => (c.exp ?? 0) * expMultiplier(hs) * (c.name === hs.boosted ? 2 : 1) * (c.name === hs.prey ? 1 + Number(hs.preyBonus) / 100 : 1);
+  const hourly = perHour(hunted, Number(killsPerHour), lootOf, expOf);
+  const upkeep = imbuementUpkeep(Object.values(build).flatMap((w) => w?.imbuements ?? []), (id) => priceById(id)?.gold);
+  const supplies = parseGold(hs.supplies) ?? 0;
+  const profit = hourly ? hourly.loot - upkeep.perHour - supplies : 0;
   return (
     <section className="hunt" aria-labelledby="hunt-title">
       <div className="compare-head">
@@ -123,7 +132,48 @@ export function HuntAdvisor({ app }: { app: AppState }) {
                 {t('killsPerHour')}
                 <input type="number" min={0} inputMode="numeric" value={killsPerHour} onChange={(e) => setKillsPerHour(e.target.value)} placeholder="300" />
               </label>
-              {hourly && <p>{t('perHourResult', { exp: hourly.exp.toLocaleString(lang), loot: formatGold(hourly.loot) })}</p>}
+              <div className="hour-options">
+                {(['stamina', 'xpBoost', 'doubleXp'] as const).map((k) => (
+                  <label key={k} className="check"><input type="checkbox" checked={hs[k]} onChange={(e) => setHs({ [k]: e.target.checked })} /> {t(`bonus.${k}`)}</label>
+                ))}
+                <label>
+                  {t('prey')}
+                  <select value={hs.prey} onChange={(e) => setHs({ prey: e.target.value })}>
+                    <option value="">{t('none')}</option>
+                    {hunted.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                  </select>
+                </label>
+                {hs.prey && (
+                  <label>
+                    {t('preyBonus')}
+                    <select value={hs.preyBonus} onChange={(e) => setHs({ preyBonus: e.target.value })}>
+                      {Array.from({ length: 10 }, (_, n) => 13 + n * 3).map((p) => <option key={p} value={p}>+{p}%</option>)}
+                    </select>
+                  </label>
+                )}
+                <label>
+                  {t('boosted')}
+                  <select value={hs.boosted} onChange={(e) => setHs({ boosted: e.target.value })}>
+                    <option value="">{t('none')}</option>
+                    {hunted.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                  </select>
+                </label>
+                <label>
+                  {t('suppliesPerHour')}
+                  <input value={hs.supplies} onChange={(e) => setHs({ supplies: e.target.value })} placeholder="1.5kk" />
+                </label>
+              </div>
+              {hourly && (
+                <table className="totals">
+                  <tbody>
+                    <tr><th scope="row">{t('expPerHour')}</th><td className="num">{hourly.exp.toLocaleString(lang)}</td></tr>
+                    <tr><th scope="row">{t('lootPerHour')}</th><td className="num">{formatGold(hourly.loot)}</td></tr>
+                    <tr><th scope="row">{t('imbuementsPerHour')}{upkeep.unpriced > 0 && <span className="muted small"> · {t('unpricedMaterials', { n: upkeep.unpriced })}</span>}</th><td className="num">−{formatGold(upkeep.perHour)}</td></tr>
+                    <tr><th scope="row">{t('suppliesPerHour')}</th><td className="num">−{formatGold(supplies)}</td></tr>
+                    <tr><th scope="row"><strong>{t('profitPerHour')}</strong></th><td className="num"><strong>{profit < 0 ? '−' : ''}{formatGold(Math.abs(profit))}</strong></td></tr>
+                  </tbody>
+                </table>
+              )}
               <p className="muted small">{t('perHourHint')}</p>
               <h3>{t('attackWith')}</h3>
               <p>
@@ -134,6 +184,8 @@ export function HuntAdvisor({ app }: { app: AppState }) {
               <p className="muted small">{t('attackHint')}</p>
             </div>
             <div>
+              <button type="button" className="optimize" onClick={optimize} disabled={!incoming.length}>{t('optimize')}</button>
+              <p className="muted small">{t('optimizeHint')}</p>
               <h3>{t('bestProtection')}</h3>
               {best.length === 0 ? (
                 <p className="muted">{t(incoming.length ? 'noProtection' : 'noDamageData')}</p>

@@ -81,6 +81,8 @@ export interface Imbuement {
   effects: Record<string, number>;
   /** Item kinds as the wiki names them: "armors", "swords", "helmets (sorcerer)", ... */
   fits: string[];
+  /** Materials per imbuing, all tiers included: [item ID, amount]. */
+  sources?: [number, number][];
   rev: number;
 }
 

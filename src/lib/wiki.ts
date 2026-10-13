@@ -308,6 +308,14 @@ export function parseProficiency(tables: string, names: string): Proficiency[] {
   });
 }
 
+/** "Green Dragon Leather: 20, Blazing Bone: 10" -> [["Green Dragon Leather", 20], ["Blazing Bone", 10]] */
+export function parseSources(text: string | undefined): [string, number][] {
+  return splitList(text).flatMap((part) => {
+    const m = /^(.+?)\s*:\s*(\d+)$/.exec(part);
+    return m ? [[m[1].trim(), Number(m[2])] as [string, number]] : [];
+  });
+}
+
 /** Converts Infobox Imbuement fields into an Imbuement, or null for effects the app does not model (e.g. capacity). */
 export function toImbuement(fields: Record<string, string>, page: { title: string; rev: number }): Imbuement | null {
   const effect = /\{\{Imbuement Effect\/([^|}]+)\|([^}]*)\}\}/.exec(fields.effect ?? '');

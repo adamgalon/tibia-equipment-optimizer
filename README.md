@@ -12,7 +12,8 @@ A free web app for [Tibia](https://www.tibia.com) players to compare equipment a
 - Build editor (step 2): pick an item for each of the 10 slots, set its forge tier and imbuements, and see total armor, skills, protections and forge effect chances. Choose Weapon Proficiency perks for the weapon. Two-handed weapons take the shield off, and mixed-vocation builds get a warning. Builds are saved in your browser and can be shared by link.
 - Hunt advisor (step 3): pick the creatures you hunt and see their hardest hits per element and how much your build blocks, which element to attack them with, and the top 3 items per slot for that damage mix, with a button to wear each one.
 - Prices (step 4): optionally load community prices for your world, type your own ("30kk"), see your build's value and the upgrades that add the most protection per gold within a budget.
-- Look up your character to set vocation and level, and enter kills per hour to see experience and loot per hour.
+- Look up your character to set vocation and level. Enter kills per hour, bonuses (stamina, XP Boost, prey, boosted creature) and supplies to see experience, loot and profit per hour.
+- Optimize your build for a hunt in one click, within a budget if you like.
 - Experience and loot (step 5): load a hunting place to fill in its creatures and see the wiki's ratings and recommended levels, plus each creature's experience and average loot value per kill from TibiaWiki's loot statistics.
 
 ## Roadmap

@@ -157,3 +157,9 @@ footer p { margin: 4px 0; }
   .items td[data-label]:not(:empty)::before { content: attr(data-label) ": "; color: var(--muted); font-size: 0.8rem; }
   .items td:empty { display: none; }
 }
+
+.hour-options { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; margin: 6px 0; }
+.hour-options label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+.hour-options label.check { flex-direction: row; align-items: center; color: var(--text); }
+.hour-options select, .hour-options input:not([type=checkbox]) { min-height: 32px; color: var(--text); max-width: 200px; }
+.optimize { margin-top: 12px; font-weight: 600; border-color: var(--accent); }

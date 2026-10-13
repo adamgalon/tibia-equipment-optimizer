@@ -22,7 +22,18 @@ test('catalog, build totals, hunt advisor and share link work together', async (
   // Spiritthorn Helmet's 12 armor takes about 8.5 off Demon's 500 physical hit; its 6% physical protection comes first.
   await expect(hunt.getByRole('row', { name: /^physical/ })).toContainText('462');
   await hunt.getByLabel('Kills per hour').fill('200');
-  await expect(hunt.getByText(/About 1,200,000 experience/)).toBeVisible();
+  await expect(hunt.getByRole('row', { name: /^Experience per hour/ })).toContainText('1,200,000');
+  await hunt.getByLabel(/Stamina bonus/).check();
+  await expect(hunt.getByRole('row', { name: /^Experience per hour/ })).toContainText('1,800,000');
+  await expect(hunt.getByRole('row', { name: /^Profit per hour/ })).toBeVisible();
+
+  // The optimizer needs one vocation; then it changes the build and keeps the old one under Saved builds.
+  await hunt.getByRole('button', { name: 'Optimize my build for this hunt' }).click();
+  await expect(hunt.getByText(/Pick your vocation/)).toBeVisible();
+  await page.locator('.filters select').first().selectOption('knight');
+  await hunt.getByRole('button', { name: 'Optimize my build for this hunt' }).click();
+  await expect(hunt.getByText(/^Changed /)).toBeVisible();
+  await expect(page.locator('.saved')).toContainText('Before optimizing');
 
   // A share link carries the build.
   await page.getByRole('button', { name: 'Copy link to this build' }).click();

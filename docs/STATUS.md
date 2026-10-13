@@ -74,6 +74,14 @@
 - Kills per hour: one number, spread evenly over the chosen creatures, gives experience and loot per hour (base experience; creatures without loot statistics add no loot).
 - Verification: 59 unit tests, 4 Playwright tests (desktop and phone), typecheck and build pass; the lookup was checked against TibiaData with a real and an unknown character.
 
+## Third round (2026-10-13)
+
+- "Optimize my build for this hunt": without a budget, each slot gets the item that blocks the most of the hunt's damage (weighted by how hard each element hits); with a budget, the upgrade with the most gain per gold that still fits, repeatedly. It needs a vocation, uses the level filter, never touches the weapon, ammunition or charged items, keeps shields compatible with two-handed weapons, and saves the replaced build under Saved builds first (new items start without tiers or imbuements).
+- Profit per hour = loot per hour − imbuement upkeep − supplies. Upkeep is the imbuing fee (Basic 7,500, Intricate 60,000, Powerful 250,000 gold; TibiaWiki "Imbuing") plus the materials at market or own prices, over 20 hours of use; unpriced materials are counted and shown, not guessed. The importer now keeps each imbuement's materials by item ID (all 69 have them).
+- Experience bonuses (TibiaWiki "Experience Point", "XP Boost", "Prey System", "Boosted Creature"): double XP event (+100%) and XP Boost (+50%) add up, the premium stamina bonus multiplies by 1.5, and prey (+13% to +40%) and the boosted creature (×2 experience and loot) apply to the one creature picked.
+- A footer link opens a new GitHub issue for problems and ideas.
+- Verification: 65 unit tests and the Playwright smoke tests pass (they now cover stamina, profit, and the optimizer refusing without a vocation and saving the old build). A knight 400 session in Claustrophobic Inferno was checked by hand: 7,345,500 experience and 1.97kk loot per hour at 300 kills with stamina, 25k imbuement fees, 442.5k profit with 1.5kk supplies.
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
@@ -97,7 +105,7 @@
 - "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
 - Per-hour figures spread the player's kills per hour evenly over the chosen creatures, ignoring spawn mixes. Some loot statistics rest on few kills (Infernal Demon: 240), and the wiki's hunting place ratings and levels are community opinions.
 - Prices are for the base item: whether Tibia Market tracks forged (tiered) copies separately is unknown, and imbuements are not priced. Community data can be weeks old on some worlds; each price shows its age.
-- "Upgrades per gold" counts protection only, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
+- The optimizer, like "Upgrades per gold", counts protection only (not armor, skills or damage), so it can trade a skill helmet for a better-protecting one, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
 - The Polish text has had a careful review, but not yet by a native speaker.
 
 ## Earlier research
