@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAttributes, parseInfobox, parseResist, parseVocations, toImbuement, toItem } from './wiki.ts';
+import { parseAttributes, parseDamage, parseInfobox, parseResist, parseVocations, toCreature, toImbuement, toItem } from './wiki.ts';
 
 const page = (fields: string) => `{{Infobox Object|List={{{1|}}}|GetValue={{{GetValue|}}}\n${fields}\n}}\nSome article text.`;
 const item = (fields: string, title = 'Test') => toItem(parseInfobox(page(fields))!, { title, rev: 1 });
@@ -10,6 +10,13 @@ describe('parseInfobox', () => {
     expect(f.name).toBe('Falcon Plate');
     expect(f.notes).toBe('See the set.');
     expect(f).not.toHaveProperty('bestloot');
+  });
+
+  it('reads past nested templates that close on their own line, and keeps link pipes inside values', () => {
+    const f = parseInfobox('{{Infobox Creature|List={{{1|}}}\n| hp = 100\n| loot = {{Loot Table\n |{{Loot Item|Gold Coin}}\n}}\n| exp = 50\n| notes = [[Rat|rats]] nearby\n}}', 'Infobox Creature')!;
+    expect(f.hp).toBe('100');
+    expect(f.exp).toBe('50');
+    expect(f.notes).toBe('rats nearby');
   });
 
   it('returns null for pages without an object infobox', () => {
@@ -74,6 +81,32 @@ describe('toItem', () => {
   it('rejects non-equipment and items without an ID', () => {
     expect(item('| name = Exercise Sword\n| itemid = 28552\n| primarytype = Exercise Weapons')).toBeNull();
     expect(item('| name = Mystery Helmet\n| primarytype = Helmets')).toBeNull();
+  });
+});
+
+describe('creatures', () => {
+  it('reads the max damage breakdown, ignoring summons and unknown values', () => {
+    expect(parseDamage('{{Max Damage|physical=500|fire=250|lifedrain=480|manadrain=120|summons=250|holy=?}}', '{{Melee|0-900}}'))
+      .toEqual({ physical: 500, fire: 250, lifedrain: 480, manadrain: 120 });
+  });
+
+  it('falls back to the strongest ability per element, with positional or named elements', () => {
+    const abilities = '{{Ability List |{{Melee|0-230}} |{{Ability|Great Fireball|100-200|element=fire}} |{{Ability|Fire Wave|150-230|Fire |scene={{Scene|spell=x}} }}'
+      + ' |{{Ability|Poison Ball|700+|poison}} |{{Ability|Paralyze|element=|condition=slowed}} |{{Ability|Fire Field|element=fire field}} }}';
+    expect(parseDamage('1500+', abilities)).toEqual({ physical: 230, fire: 230, earth: 700 });
+  });
+
+  it('keeps hit points, experience, boss flag and only the unusual damage modifiers', () => {
+    const fields = { hp: '8200', exp: '6000', isboss: 'no', physicalDmgMod: '75%', fireDmgMod: '0%', holyDmgMod: '112%', iceDmgMod: '100%', maxdmg: '{{Max Damage|fire=250}}' };
+    expect(toCreature(fields, { title: 'Demon', rev: 7 })).toEqual({ name: 'Demon', hp: 8200, exp: 6000, damage: { fire: 250 }, takes: { physical: 75, fire: 0, holy: 112 }, rev: 7 });
+    expect(toCreature({ ...fields, isboss: 'yes' }, { title: 'Boss', rev: 1 })?.boss).toBe(true);
+    expect(toCreature({ ...fields, status: 'deprecated' }, { title: 'Old', rev: 1 })).toBeNull();
+  });
+
+  it('keeps bosses with unknown hit points when they list damage, and drops pages with nothing to show', () => {
+    expect(toCreature({ hp: '?', isboss: 'yes', maxdmg: '{{Max Damage|death=2000}}' }, { title: 'Boss', rev: 1 }))
+      .toEqual({ name: 'Boss', damage: { death: 2000 }, takes: {}, boss: true, rev: 1 });
+    expect(toCreature({ hp: '?', exp: '0' }, { title: 'Pillar', rev: 1 })).toBeNull();
   });
 });
 

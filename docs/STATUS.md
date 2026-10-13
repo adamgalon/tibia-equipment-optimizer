@@ -1,7 +1,7 @@
 # Project status
 
 **Updated:** 2026-10-13  
-**Current step:** 2 — build editor (done); step 3, the hunt advisor, is next  
+**Current step:** 3 — hunt advisor (done); step 4, prices and budget, is next  
 **Plan and stack:** see `decisions/0002-static-app-and-five-step-plan.md`
 
 ## Steps
@@ -11,8 +11,8 @@
 | 0 | Research, data feasibility, source verification | Done (2026-10-12, verified and corrected 2026-10-13) |
 | 1 | Repository, item importer, item browser and side-by-side comparison, tests, CI, GitHub Pages | Done |
 | 2 | Build editor: 10 slots, totals, forge tier and imbuement inputs, saved builds | Done (Weapon Proficiency perks moved to a later step) |
-| 3 | Hunt advisor: creature damage elements, protection per slot, attack element | Next |
-| 4 | Prices and budget: community/manual prices per world, upgrade per gold | Not started |
+| 3 | Hunt advisor: creature damage elements, protection per slot, attack element | Done |
+| 4 | Prices and budget: community/manual prices per world, upgrade per gold | Next |
 | 5 | Experience and loot per creature and hunting place | Not started |
 
 ## Step 1 outcome
@@ -32,6 +32,14 @@
 - The current build and named saved builds are kept in browser storage and checked on load: unknown items, tiers above the cap and imbuements that no longer fit are dropped. Builds saved before forge tiers still load.
 - Verification: 30 unit tests, typecheck and production build pass. Checked in headless Edge at 1280 px (English) and 390 px (Polish) with a forged and imbued level-400 knight build, including imbuements the rules must refuse; totals were checked by hand.
 
+## Step 3 outcome (2026-10-13)
+
+- The importer also reads the `Infobox Creature` pages into `data/creatures.json`: 1,769 creatures, 1,294 of them with damage data. Removed, event-only and test-server creatures are skipped, as are pages with no hit points, damage or experience; bosses whose hit points are "?" are kept when they list damage. The file loads after the first paint as its own chunk (46 KB gzipped).
+- Highest damage per element comes from the wiki's `{{Max Damage}}` breakdown, else from the strongest listed ability of each element (poison counts as earth). Damage taken per attack element comes from the `<element>DmgMod` fields.
+- Hunt advisor: pick up to 8 creatures (exact name, or the first name starting with the text). It shows the hardest hit per element with your build's protection and the damage left, the attack elements by average damage taken, and the top 3 items per slot by how much of the damage mix they block on their own (each protection weighted by its element's share of the hardest hits). "Wear" puts an item into the build. The chosen creatures are kept in browser storage.
+- Parser fix: infoboxes are now read by matching braces instead of stopping at the first line that starts with `}}`. That recovered Crypt Bile, whose infobox closes on the same line; the same import also picked up 3 items new on the wiki (Ink Sword, Moonsilver Axe, Stellar Moonsilver Axe).
+- Verification: 40 unit tests, typecheck and production build pass. Checked in headless Edge at 1280 px (English) and 390 px (Polish) with Brachiodemon and Demon against a knight level 400 build, including the "Wear" button; the table values were checked by hand.
+
 ## Open questions
 
 - Can a weapon with its own life leech (for example Soulcutter, 2%) take Vampirism? TibiaWiki's Imbuing page says no. The app allows it until the owner checks in the game (raised 2026-10-13). If the game says no, add `lifeLeech` back to the blocked stats in `hasOwn` in `src/lib/build.ts` and flip its test.
@@ -45,6 +53,9 @@
 - Totals count equipment only. The 5% crit chance with 10% extra damage that every character has since Summer Update 2025, and Exaltation Overload event bonuses, are not included.
 - Build totals leave out defense (it comes from the shield or weapon, not a sum) and weapon attack; both are shown per item.
 - With the vocation filter on "All", a build can mix items for different vocations without a warning.
+- Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection only: armor, defense and mitigation, which also cut physical hits, are not modelled.
+- "Best protection" ranks items by their own protections only, without imbuements or forge tiers, and charged items such as Stone Skin Amulet and Might Ring rank high although their charges run out.
+- "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
 - Saved builds cannot be shared by link or exported yet.
 - On phones the item list scrolls sideways; a card layout could replace the table later.
 - The Polish translation has not been reviewed by a native speaker.

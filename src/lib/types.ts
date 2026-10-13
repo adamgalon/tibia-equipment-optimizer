@@ -3,6 +3,8 @@ export type Vocation = (typeof VOCATIONS)[number];
 
 export const ELEMENTS = ['physical', 'fire', 'earth', 'energy', 'ice', 'holy', 'death', 'lifedrain', 'manadrain', 'drowning'] as const;
 export type Element = (typeof ELEMENTS)[number];
+/** The elements players attack with. */
+export const ATTACK_ELEMENTS: Element[] = ['physical', 'earth', 'fire', 'death', 'energy', 'holy', 'ice'];
 
 export const SKILLS = [
   'magic', 'sword', 'axe', 'club', 'distance', 'fist', 'shielding',
@@ -81,4 +83,23 @@ export interface Imbuement {
 export interface ImbuementData {
   meta: DataMeta;
   imbuements: Imbuement[];
+}
+
+export interface Creature {
+  /** Wiki page title. */
+  name: string;
+  /** Missing for many bosses, whose pages list "?". */
+  hp?: number;
+  exp?: number;
+  /** Highest known damage per element: the wiki's max damage breakdown, else its strongest listed ability of each element. */
+  damage: Partial<Record<Element, number>>;
+  /** Damage it takes per attack element in %, only where it differs from the normal 100%. */
+  takes: Partial<Record<Element, number>>;
+  boss?: true;
+  rev: number;
+}
+
+export interface CreatureData {
+  meta: DataMeta;
+  creatures: Creature[];
 }

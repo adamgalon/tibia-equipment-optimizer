@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest';
+import { attackElements, bestProtection, blockedShare, incomingDamage } from './hunt.ts';
+import type { Creature, Item } from './types.ts';
+
+const demon: Creature = { name: 'Demon', hp: 8200, damage: { physical: 500, fire: 250 }, takes: { fire: 0, holy: 112, ice: 112 }, rev: 1 };
+const lord: Creature = { name: 'Dragon Lord', hp: 1900, damage: { physical: 230, fire: 440 }, takes: { fire: 0, ice: 110, earth: 20 }, rev: 1 };
+const base = { type: 'Armors', vocations: [], level: 0, skills: {}, resist: {}, wiki: 'x', rev: 1 } satisfies Partial<Item>;
+
+describe('hunt advisor', () => {
+  it('takes the hardest hit per element across creatures, hardest first', () => {
+    expect(incomingDamage([demon, lord])).toEqual([
+      { element: 'physical', max: 500, from: 'Demon' },
+      { element: 'fire', max: 440, from: 'Dragon Lord' },
+    ]);
+  });
+
+  it('averages how much damage each element does to them, treating unlisted elements as 100%', () => {
+    const [best, second] = attackElements([demon, lord]);
+    expect(best).toEqual({ element: 'ice', takes: 111 });
+    expect(second).toEqual({ element: 'holy', takes: 106 });
+    expect(attackElements([demon, lord]).find((a) => a.element === 'earth')?.takes).toBe(60);
+  });
+
+  it('weighs each protection by how hard its element hits, and penalises weaknesses', () => {
+    const incoming = incomingDamage([demon]); // physical 500, fire 250: weights 2/3 and 1/3
+    const fireArmor: Item = { ...base, id: 1, name: 'Fire Armor', slot: 'body', resist: { fire: 15 } };
+    const mixed: Item = { ...base, id: 2, name: 'Mixed', slot: 'body', resist: { physical: 9, fire: -3 } };
+    expect(blockedShare(fireArmor, incoming)).toBeCloseTo(5);
+    expect(blockedShare(mixed, incoming)).toBeCloseTo(5);
+    expect(blockedShare(fireArmor, [])).toBe(0);
+  });
+
+  it('ranks the best items per slot and leaves out slots where nothing helps', () => {
+    const incoming = incomingDamage([demon]);
+    const a: Item = { ...base, id: 1, name: 'A', slot: 'body', resist: { fire: 15 } };
+    const b: Item = { ...base, id: 2, name: 'B', slot: 'body', resist: { physical: 12 } };
+    const c: Item = { ...base, id: 3, name: 'C', slot: 'body', resist: { ice: 20 } };
+    const result = bestProtection({ body: [a, b, c], head: [c] } as never, incoming);
+    expect(result).toHaveLength(1);
+    expect(result[0].slot).toBe('body');
+    expect(result[0].picks.map((p) => p.item.name)).toEqual(['B', 'A']);
+  });
+});

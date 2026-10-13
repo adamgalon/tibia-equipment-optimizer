@@ -1,14 +1,15 @@
-// Imports every equipment item and imbuement from TibiaWiki into data/items.json and data/imbuements.json.
+// Imports every equipment item, imbuement and creature from TibiaWiki into data/items.json, data/imbuements.json and data/creatures.json.
 // Usage: npm run import:items
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { parseInfobox, toImbuement, toItem } from '../src/lib/wiki.ts';
-import type { DataMeta, Imbuement, Item } from '../src/lib/types.ts';
+import { parseInfobox, toCreature, toImbuement, toItem } from '../src/lib/wiki.ts';
+import type { Creature, DataMeta, Imbuement, Item } from '../src/lib/types.ts';
 
 const API = 'https://tibia.fandom.com/api.php';
 const USER_AGENT = 'tibia-equipment-optimizer/0.1 (+https://github.com/adamgalon/tibia-equipment-optimizer)';
-// A healthy import returns ~1,600 items and ~70 imbuements; far fewer means the wiki or the parser broke.
+// A healthy import returns ~1,600 items, ~70 imbuements and ~2,000 creatures; far fewer means the wiki or the parser broke.
 const MIN_ITEMS = 1000;
 const MIN_IMBUEMENTS = 60;
+const MIN_CREATURES = 1500;
 
 async function getJson(params: Record<string, string>): Promise<any> {
   const url = `${API}?${new URLSearchParams({ ...params, format: 'json', formatversion: '2', maxlag: '5' })}`;
@@ -91,8 +92,20 @@ await eachInfobox('Infobox Imbuement', (fields, page) => {
 });
 console.log(`Parsed ${imbuements.length} imbuements.`);
 
-// Check both before writing either, so a broken run never leaves the files out of step.
+// Creatures: ~2,800 pages use the creature infobox, ~57 requests.
+const creatures: Creature[] = [];
+let creaturesSkipped = 0;
+await eachInfobox('Infobox Creature', (fields, page) => {
+  const creature = toCreature(fields, page);
+  if (creature) creatures.push(creature);
+  else creaturesSkipped++;
+});
+console.log(`Parsed ${creatures.length} creatures; ${creaturesSkipped} pages skipped (removed, or no hit points, damage or experience).`);
+
+// Check all before writing any, so a broken run never leaves the files out of step.
 if (items.size < MIN_ITEMS) throw new Error(`Only ${items.size} items parsed; keeping the existing data files.`);
 if (imbuements.length < MIN_IMBUEMENTS) throw new Error(`Only ${imbuements.length} imbuements parsed; keeping the existing data files.`);
+if (creatures.length < MIN_CREATURES) throw new Error(`Only ${creatures.length} creatures parsed; keeping the existing data files.`);
 writeIfChanged('items.json', 'items', [...items.values()].sort((a, b) => a.name.localeCompare(b.name)));
 writeIfChanged('imbuements.json', 'imbuements', imbuements.sort((a, b) => a.name.localeCompare(b.name)));
+writeIfChanged('creatures.json', 'creatures', creatures.sort((a, b) => a.name.localeCompare(b.name)));

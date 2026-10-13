@@ -45,7 +45,7 @@ const en: Record<string, string> = {
   "status.deprecated": "removed",
   "status.TS-only": "test server only",
   footerData:
-    "Item and imbuement data from {source}, licensed {license}, fetched {date}.",
+    "Item, imbuement and creature data from {source}, licensed {license}, fetched {date}.",
   footerTrademark:
     "Tibia is a trademark of CipSoft GmbH. This fan project is not affiliated with or endorsed by CipSoft.",
   openWiki: "Open on TibiaWiki",
@@ -81,6 +81,38 @@ const en: Record<string, string> = {
   "forge.momentum": "Momentum: chance to cut cooldowns by 2 s",
   "forge.transcendence": "Transcendence: chance of a short Avatar",
   "forge.amplification": "Amplification: raises the chances above",
+  // Hunt advisor
+  hunt: "Hunt advisor",
+  huntHint:
+    "Add the creatures you hunt to see what hits you hardest, what to attack them with and which items protect you best.",
+  addCreature: "Add creature",
+  addButton: "Add",
+  creaturesLoading: "Loading creatures…",
+  creaturesFailed:
+    "Creature data could not be loaded. Reload the page to try again.",
+  creatureNotFound: 'No creature called "{name}".',
+  removeCreature: "Remove {name}",
+  huntFull: "You can add up to {n} creatures. Remove one first.",
+  boss: "boss",
+  incoming: "They hit you with",
+  "col.element": "Element",
+  "col.maxHit": "Highest hit",
+  "col.yourProtection": "Your protection",
+  "col.youTake": "You take",
+  incomingHint:
+    "Highest hits as TibiaWiki lists them, after your build's protection. Armor and defense also reduce physical hits; they are not counted here.",
+  noDamageData: "TibiaWiki lists no damage for these creatures.",
+  attackWith: "Attack with",
+  attackHint: "Damage they take from each element; 100% is normal.",
+  bestProtection: "Best protection for this hunt",
+  bestProtectionHint:
+    "Items ranked by their own protections, weighted by how hard each element hits. Uses the vocation and level filters; imbuements are not counted.",
+  noProtection:
+    "No item for your vocation and level protects against these hits.",
+  blocks: "blocks {n}%",
+  wear: "Wear",
+  wearItem: "Wear {name}",
+  worn: "worn",
   // Stats
   level: "Required level",
   armor: "Armor",
@@ -196,7 +228,7 @@ const pl: Record<string, string> = {
   "status.deprecated": "usunięty",
   "status.TS-only": "tylko serwer testowy",
   footerData:
-    "Dane przedmiotów i imbuementów: {source}, licencja {license}, pobrane {date}.",
+    "Dane przedmiotów, imbuementów i potworów: {source}, licencja {license}, pobrane {date}.",
   footerTrademark:
     "Tibia jest znakiem towarowym CipSoft GmbH. Ten projekt fanowski nie jest powiązany z CipSoft ani przez nią wspierany.",
   openWiki: "Otwórz w TibiaWiki",
@@ -231,6 +263,37 @@ const pl: Record<string, string> = {
   "forge.momentum": "Momentum: szansa na skrócenie cooldownów o 2 s",
   "forge.transcendence": "Transcendence: szansa na krótki Avatar",
   "forge.amplification": "Amplification: zwiększa powyższe szanse",
+  hunt: "Doradca polowania",
+  huntHint:
+    "Dodaj potwory, na które polujesz, aby zobaczyć, co bije najmocniej, czym je atakować i które przedmioty najlepiej chronią.",
+  addCreature: "Dodaj potwora",
+  addButton: "Dodaj",
+  creaturesLoading: "Wczytywanie potworów…",
+  creaturesFailed:
+    "Nie udało się wczytać danych potworów. Odśwież stronę, aby spróbować ponownie.",
+  creatureNotFound: 'Nie ma potwora o nazwie "{name}".',
+  removeCreature: "Usuń {name}",
+  huntFull: "Możesz dodać maksymalnie {n} potworów. Najpierw usuń jednego.",
+  boss: "boss",
+  incoming: "Czym biją",
+  "col.element": "Żywioł",
+  "col.maxHit": "Najmocniejszy cios",
+  "col.yourProtection": "Twoja ochrona",
+  "col.youTake": "Otrzymasz",
+  incomingHint:
+    "Najmocniejsze ciosy według TibiaWiki, po uwzględnieniu ochron zestawu. Pancerz i obrona też zmniejszają ciosy fizyczne; tu nie są liczone.",
+  noDamageData: "TibiaWiki nie podaje obrażeń tych potworów.",
+  attackWith: "Atakuj żywiołem",
+  attackHint: "Obrażenia, jakie otrzymują od każdego żywiołu; 100% to normalnie.",
+  bestProtection: "Najlepsza ochrona na to polowanie",
+  bestProtectionHint:
+    "Przedmioty uszeregowane według własnych ochron, ważonych siłą ciosów każdego żywiołu. Uwzględnia filtry profesji i poziomu; imbuementy nie są liczone.",
+  noProtection:
+    "Żaden przedmiot dla twojej profesji i poziomu nie chroni przed tymi ciosami.",
+  blocks: "blokuje {n}%",
+  wear: "Załóż",
+  wearItem: "Załóż {name}",
+  worn: "założony",
   level: "Wymagany poziom",
   armor: "Pancerz",
   defense: "Obrona",

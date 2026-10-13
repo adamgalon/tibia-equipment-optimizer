@@ -5,10 +5,11 @@ import imbuementData from '../data/imbuements.json';
 import { LANGS, translate } from './i18n.ts';
 import type { Lang } from './i18n.ts';
 import { ELEMENTS, SKILLS, SLOTS, VOCATIONS } from './lib/types.ts';
-import type { Element, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
+import type { Creature, CreatureData, Element, Imbuement, ImbuementData, Item, ItemData, Slot, Vocation } from './lib/types.ts';
 import { bestIndexes, formatDelta, formatValue, maxTier, visibleRows } from './lib/stats.ts';
 import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, toStored } from './lib/build.ts';
 import type { Build, StoredBuild, Worn } from './lib/build.ts';
+import { attackElements, bestProtection, incomingDamage } from './lib/hunt.ts';
 
 const { meta, items } = data as ItemData;
 const byId = new Map(items.map((i) => [i.id, i]));
@@ -44,6 +45,13 @@ function initialSaved(): SavedBuild[] {
   return Array.isArray(value) ? value.filter((b) => typeof b?.name === 'string') : [];
 }
 
+const MAX_HUNT = 8;
+/** The hunt advisor's creatures by wiki page name; names the data no longer has are simply not shown. */
+function initialHunt(): string[] {
+  const value = readStored('hunt');
+  return Array.isArray(value) ? value.filter((name) => typeof name === 'string').slice(0, MAX_HUNT) : [];
+}
+
 // A comparison lives in the URL hash (#compare=id,id) so it can be shared as a link.
 function initialCompare(): number[] {
   const match = location.hash.match(/compare=([\d,]+)/);
@@ -51,7 +59,7 @@ function initialCompare(): number[] {
   return match[1].split(',').map(Number).filter((id) => items.some((i) => i.id === id)).slice(0, MAX_COMPARE);
 }
 
-const wikiUrl = (item: Item) => `https://tibia.fandom.com/wiki/${encodeURIComponent(item.wiki.replace(/ /g, '_'))}`;
+const wikiUrl = (title: string) => `https://tibia.fandom.com/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 const attackValue = (i: Item) => (i.damage ? (i.damage.min + i.damage.max) / 2 : (i.attack ?? 0) + (i.elementAttack?.value ?? 0));
 
@@ -120,8 +128,20 @@ export default function App() {
   const [saved, setSaved] = useState<SavedBuild[]>(initialSaved);
   const [buildName, setBuildName] = useState('');
   const [buildNotice, setBuildNotice] = useState('');
+  const [creatures, setCreatures] = useState<Map<string, Creature>>();
+  const [creaturesFailed, setCreaturesFailed] = useState(false);
+  const [hunt, setHunt] = useState<string[]>(initialHunt);
+  const [creatureQuery, setCreatureQuery] = useState('');
+  const [huntNotice, setHuntNotice] = useState('');
 
   const t: T = (key, vars) => translate(lang, key, vars);
+
+  useEffect(() => {
+    // Loaded after the first paint: only the hunt advisor needs the ~250 KB creature list.
+    import('../data/creatures.json')
+      .then((m) => setCreatures(new Map((m.default as unknown as CreatureData).creatures.map((c) => [c.name, c]))))
+      .catch(() => setCreaturesFailed(true));
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -134,6 +154,7 @@ export default function App() {
 
   useEffect(() => writeStored('build', toStored(build)), [build]);
   useEffect(() => writeStored('builds', saved), [saved]);
+  useEffect(() => writeStored('hunt', hunt), [hunt]);
 
   const maxLevel = level === '' ? Infinity : Number(level);
 
@@ -153,6 +174,13 @@ export default function App() {
     return Object.fromEntries(SLOTS.map((s) => [s, fit.filter((i) => i.slot === s)])) as Record<Slot, Item[]>;
   }, [vocation, maxLevel, showUnavailable]);
   const totals = buildTotals(build);
+
+  const creatureOptions = useMemo(() => [...(creatures?.keys() ?? [])].map((name) => <option key={name} value={name} />), [creatures]);
+  const hunted = hunt.flatMap((name) => creatures?.get(name) ?? []);
+  const incoming = incomingDamage(hunted);
+  const attack = hunted.length ? attackElements(hunted) : [];
+  const best = bestProtection(slotOptions, incoming);
+  const protectionAgainst = (e: Element) => totals.find(({ row }) => row.key === `resist.${e}`)?.total ?? 0;
 
   useEffect(() => setLimit(PAGE), [filtered]);
 
@@ -197,6 +225,21 @@ export default function App() {
     if (!name) return;
     setSaved([...saved.filter((b) => b.name !== name), { name, slots: toStored(build) }]);
     setBuildName('');
+  }
+
+  // An exact name wins, otherwise the first name that starts with the text ("brach" -> Brachiodemon).
+  function addCreature(e: FormEvent) {
+    e.preventDefault();
+    const q = creatureQuery.trim().toLowerCase();
+    if (!q) return;
+    const names = [...(creatures?.keys() ?? [])];
+    const found = names.find((n) => n.toLowerCase() === q) ?? names.find((n) => n.toLowerCase().startsWith(q));
+    if (!found) return setHuntNotice(t('creatureNotFound', { name: creatureQuery.trim() }));
+    setCreatureQuery('');
+    if (hunt.includes(found)) return setHuntNotice('');
+    if (hunt.length >= MAX_HUNT) return setHuntNotice(t('huntFull', { n: MAX_HUNT }));
+    setHunt([...hunt, found]);
+    setHuntNotice('');
   }
 
   return (
@@ -367,6 +410,109 @@ export default function App() {
         </div>
       </section>
 
+      <section className="hunt" aria-labelledby="hunt-title">
+        <div className="compare-head">
+          <h2 id="hunt-title">{t('hunt')}</h2>
+          {hunt.length > 0 && <button type="button" onClick={() => { setHunt([]); setHuntNotice(''); }}>{t('clear')}</button>}
+        </div>
+        <p className="muted small">{t('huntHint')}</p>
+        {creatures ? (
+          <form className="hunt-pick" onSubmit={addCreature}>
+            <label>
+              {t('addCreature')}
+              <input list="creature-names" value={creatureQuery} onChange={(e) => setCreatureQuery(e.target.value)} placeholder="Demon, Brachiodemon…" />
+            </label>
+            <datalist id="creature-names">{creatureOptions}</datalist>
+            <button type="submit">{t('addButton')}</button>
+          </form>
+        ) : (
+          <p className="muted">{t(creaturesFailed ? 'creaturesFailed' : 'creaturesLoading')}</p>
+        )}
+        {huntNotice && <p className="notice" role="status">{huntNotice}</p>}
+        {hunted.length > 0 && (
+          <>
+            <ul className="chips" aria-label={t('hunt')}>
+              {hunted.map((c) => (
+                <li key={c.name}>
+                  <a href={wikiUrl(c.name)} target="_blank" rel="noreferrer" title={t('openWiki')}>{c.name}</a>
+                  {c.boss && <span className="tag">{t('boss')}</span>}
+                  <button type="button" className="icon" aria-label={t('removeCreature', { name: c.name })} onClick={() => setHunt(hunt.filter((n) => n !== c.name))}>×</button>
+                </li>
+              ))}
+            </ul>
+            <div className="hunt-grid">
+              <div>
+                <h3>{t('incoming')}</h3>
+                {incoming.length === 0 ? (
+                  <p className="muted">{t('noDamageData')}</p>
+                ) : (
+                  <div className="scroll">
+                    <table className="totals">
+                      <thead>
+                        <tr>
+                          <th scope="col">{t('col.element')}</th>
+                          <th scope="col" className="num">{t('col.maxHit')}</th>
+                          <th scope="col" className="num">{t('col.yourProtection')}</th>
+                          <th scope="col" className="num">{t('col.youTake')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incoming.map(({ element, max, from }) => {
+                          const protection = protectionAgainst(element);
+                          return (
+                            <tr key={element}>
+                              <th scope="row">{t(`el.${element}`)}</th>
+                              <td className="num">{max}{hunted.length > 1 && <span className="muted small"> · {from}</span>}</td>
+                              <td className="num">{protection}%</td>
+                              <td className="num">{Math.round(max * (1 - protection / 100))}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p className="muted small">{t('incomingHint')}</p>
+                <h3>{t('attackWith')}</h3>
+                <p>
+                  {attack.map(({ element, takes }) => (
+                    <span key={element} className={takes === attack[0].takes ? 'tag best' : 'tag'}>{t(`el.${element}`)} {takes}%</span>
+                  ))}
+                </p>
+                <p className="muted small">{t('attackHint')}</p>
+              </div>
+              <div>
+                <h3>{t('bestProtection')}</h3>
+                {best.length === 0 ? (
+                  <p className="muted">{t(incoming.length ? 'noProtection' : 'noDamageData')}</p>
+                ) : best.map(({ slot, picks }) => (
+                  <div key={slot} className="best-slot">
+                    <h4>{t(`slot.${slot}`)}</h4>
+                    <ol>
+                      {picks.map(({ item, blocks }) => (
+                        <li key={item.id}>
+                          <span>
+                            <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
+                            {item.level ? ` (${item.level})` : ''} · {t('blocks', { n: Math.round(blocks * 10) / 10 })}
+                            <span className="muted small"> · {protections(item, t)}</span>
+                          </span>
+                          {build[slot]?.item === item ? (
+                            <span className="tag">{t('worn')}</span>
+                          ) : (
+                            <button type="button" aria-label={t('wearItem', { name: item.name })} onClick={() => wear(slot, item)}>{t('wear')}</button>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+                <p className="muted small">{t('bestProtectionHint')}</p>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
       <section className="compare" aria-labelledby="compare-title">
         <div className="compare-head">
           <h2 id="compare-title">{t('compare')} ({compared.length}/{MAX_COMPARE})</h2>
@@ -383,7 +529,7 @@ export default function App() {
                   <th scope="col"><span className="sr-only">{t('col.name')}</span></th>
                   {compared.map((item) => (
                     <th key={item.id} scope="col">
-                      <a href={wikiUrl(item)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
+                      <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
                       <button type="button" className="icon" aria-label={t('removeItem', { name: item.name })} onClick={() => toggleCompare(item.id)}>×</button>
                       <div className="muted small">{t(`slot.${item.slot}`)} · {vocationText(item, t)}</div>
                     </th>
@@ -459,7 +605,7 @@ export default function App() {
                         </button>
                       </td>
                       <td>
-                        <a href={wikiUrl(item)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
+                        <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
                         {item.hands === 2 && <span className="tag">{t('twoHanded')}</span>}
                         {item.status && <span className="tag warn">{t(`status.${item.status}`)}</span>}
                       </td>

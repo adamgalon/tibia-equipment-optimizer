@@ -1,5 +1,5 @@
-import { VOCATIONS } from './types.ts';
-import type { Element, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
+import { ATTACK_ELEMENTS, VOCATIONS } from './types.ts';
+import type { Creature, Element, Imbuement, Item, ItemStatus, Skill, Slot, Vocation } from './types.ts';
 
 /** Wiki item type -> equipment slot. Types not listed (exercise weapons, quest items, ...) are not equipment. */
 const SLOT_BY_TYPE: Record<string, Slot> = {
@@ -28,6 +28,11 @@ const RESIST_NAMES: Record<string, Element> = {
   holy: 'holy', death: 'death', 'life drain': 'lifedrain', 'mana drain': 'manadrain', drowning: 'drowning',
 };
 
+/** Element names in creature abilities and {{Max Damage}} parameters; poison is earth damage. */
+const DAMAGE_NAMES: Record<string, Element> = {
+  ...RESIST_NAMES, poison: 'earth', lifedrain: 'lifedrain', manadrain: 'manadrain', drown: 'drowning',
+};
+
 const ELEMENT_ATTACK_FIELDS: Record<string, Element> = {
   fire_attack: 'fire', earth_attack: 'earth', ice_attack: 'ice', energy_attack: 'energy', death_attack: 'death',
 };
@@ -47,13 +52,31 @@ const IMBUEMENT_EFFECTS: Record<string, string[]> = {
 
 /** Reads the top-level `| key = value` parameters of the first `{{<template> ...}}` in a page. */
 export function parseInfobox(wikitext: string, template = 'Infobox Object'): Record<string, string> | null {
-  const match = new RegExp(`\\{\\{${template}(.*?)\\n\\}\\}`, 's').exec(wikitext);
-  if (!match) return null;
+  const start = wikitext.indexOf(`{{${template}`);
+  if (start < 0) return null;
+  // Split on the infobox's own "|" and stop at its own "}}", skipping nested templates ({{Loot Table ...}}) and links ([[a|b]]).
+  const parts: string[] = [];
+  let depth = 0;
+  let from = start + template.length + 2;
+  for (let i = from; i < wikitext.length; i++) {
+    const pair = wikitext.slice(i, i + 2);
+    if (pair === '{{' || pair === '[[') {
+      depth++;
+      i++;
+    } else if (depth > 0 && (pair === '}}' || pair === ']]')) {
+      depth--;
+      i++;
+    } else if (depth === 0 && (pair === '}}' || wikitext[i] === '|')) {
+      parts.push(wikitext.slice(from, i));
+      from = i + 1;
+      if (pair === '}}') break;
+    }
+  }
   const fields: Record<string, string> = {};
-  for (const part of match[1].split('\n|')) {
+  for (const part of parts) {
     const eq = part.indexOf('=');
     if (eq < 0) continue;
-    const key = part.slice(0, eq).replace(/^\|/, '').trim();
+    const key = part.slice(0, eq).trim();
     const value = cleanMarkup(part.slice(eq + 1));
     if (key && value) fields[key] = value;
   }
@@ -186,6 +209,54 @@ export function toItem(fields: Record<string, string>, page: { title: string; re
   // Drop unset optional fields so the JSON stays small and diffs stay readable.
   for (const key of Object.keys(item) as (keyof Item)[]) if (item[key] === undefined) delete item[key];
   return item;
+}
+
+/** Highest number in "150-250", "700+" or "0-500"; undefined for "?". */
+function maxNumber(value: string | undefined): number | undefined {
+  const numbers = value?.match(/\d+/g);
+  return numbers ? Math.max(...numbers.map(Number)) : undefined;
+}
+
+/** Highest damage per element: the {{Max Damage|fire=440|...}} breakdown, else the strongest listed ability of each element. */
+export function parseDamage(maxdmg: string | undefined, abilities: string | undefined): Partial<Record<Element, number>> {
+  const damage: Partial<Record<Element, number>> = {};
+  const add = (name: string | undefined, value: number | undefined) => {
+    const element = DAMAGE_NAMES[name?.trim().toLowerCase() ?? ''];
+    if (element && value) damage[element] = Math.max(damage[element] ?? 0, value);
+  };
+  for (const param of /\{\{Max Damage\|([^}]*)\}\}/.exec(maxdmg ?? '')?.[1].split('|') ?? []) {
+    const [name, value] = param.split('=');
+    add(name, maxNumber(value));
+  }
+  if (Object.keys(damage).length) return damage;
+  // {{Melee|0-500}}, {{Ability|Great Fireball|150-250|fire}} or {{Ability|Fire Wave|150-230|element=fire}}
+  for (const [, kind, body] of (abilities ?? '').matchAll(/\{\{(Melee|Ability)\|([^{}]*)/g)) {
+    const params = body.split('|');
+    const named = params.find((p) => /^\s*element\s*=/.test(p))?.split('=')[1];
+    const positional = params.filter((p) => !p.includes('='));
+    if (kind === 'Melee') add(named || 'physical', maxNumber(positional[0]));
+    else add(named || positional[2], maxNumber(positional[1]));
+  }
+  return damage;
+}
+
+/**
+ * Converts Infobox Creature fields into a Creature, or null for removed creatures and for pages with nothing to show
+ * (no hit points, damage or experience, such as pillars). Many bosses list "?" hit points but do list their damage.
+ */
+export function toCreature(fields: Record<string, string>, page: { title: string; rev: number }): Creature | null {
+  if (['deprecated', 'unavailable', 'TS-only'].includes(fields.status)) return null;
+  const creature: Creature = { name: page.title, hp: num(fields.hp), exp: num(fields.exp), damage: parseDamage(fields.maxdmg, fields.abilities), takes: {}, rev: page.rev };
+  if (creature.hp === undefined && !creature.exp && !Object.keys(creature.damage).length) return null;
+  for (const element of ATTACK_ELEMENTS) {
+    const value = num(fields[`${element}DmgMod`]);
+    if (value !== undefined && value !== 100) creature.takes[element] = value;
+  }
+  if (fields.isboss === 'yes') creature.boss = true;
+  // Drop unset optional fields so the JSON stays small and diffs stay readable.
+  if (creature.hp === undefined) delete creature.hp;
+  if (creature.exp === undefined) delete creature.exp;
+  return creature;
 }
 
 /** Converts Infobox Imbuement fields into an Imbuement, or null for effects the app does not model (e.g. capacity). */
