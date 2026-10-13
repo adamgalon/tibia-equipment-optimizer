@@ -10,6 +10,8 @@ import { bestIndexes, formatDelta, formatValue, maxTier, visibleRows } from './l
 import { ROW_BY_KEY, buildTotals, canImbue, equip, fitsTogether, fromStored, toStored } from './lib/build.ts';
 import type { Build, StoredBuild, Worn } from './lib/build.ts';
 import { attackElements, bestProtection, incomingDamage } from './lib/hunt.ts';
+import { formatGold, marketPrice, parseGold, upgradesPerGold } from './lib/prices.ts';
+import type { Price } from './lib/prices.ts';
 
 const { meta, items } = data as ItemData;
 const byId = new Map(items.map((i) => [i.id, i]));
@@ -50,6 +52,46 @@ const MAX_HUNT = 8;
 function initialHunt(): string[] {
   const value = readStored('hunt');
   return Array.isArray(value) ? value.filter((name) => typeof name === 'string').slice(0, MAX_HUNT) : [];
+}
+
+const MARKET_API = 'https://api.tibiamarket.top';
+// The rate-limited API is asked at most hourly per world; world names are kept for a day.
+const MARKET_TTL = 60 * 60 * 1000;
+const DAY = 24 * 60 * 60 * 1000;
+
+/** Tibia Market allows about one request per 5 seconds, so a 429 is retried once. */
+async function marketJson(path: string): Promise<unknown> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${MARKET_API}${path}`);
+    // Retry-After is not readable cross-origin; its usual value is 5 s.
+    if (res.status === 429 && attempt === 0) {
+      await new Promise((r) => setTimeout(r, 6000));
+      continue;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+}
+
+const worldNames = (value: unknown): string[] =>
+  Array.isArray(value) ? value.flatMap((w) => (typeof w?.name === 'string' ? [w.name] : [])).sort() : [];
+
+function cachedWorlds(): string[] {
+  const cached = readStored('worlds') as { fetchedAt?: number; list?: unknown } | null;
+  return cached && Date.now() - (cached.fetchedAt ?? 0) < DAY ? worldNames(cached.list) : [];
+}
+
+function cachedMarket(world: string): Map<number, Price> | undefined {
+  const cached = readStored('market') as { world?: string; fetchedAt?: number; prices?: unknown } | null;
+  if (cached?.world !== world || Date.now() - (cached.fetchedAt ?? 0) >= MARKET_TTL || !Array.isArray(cached.prices)) return undefined;
+  return new Map(cached.prices.filter((e): e is [number, Price] => typeof e?.[0] === 'number' && typeof e?.[1]?.gold === 'number'));
+}
+
+/** The player's own prices: world ("" when none is chosen) -> item ID -> gold. */
+type OwnPrices = Record<string, Record<string, number>>;
+function initialOwnPrices(): OwnPrices {
+  const value = readStored('prices');
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as OwnPrices) : {};
 }
 
 // A comparison lives in the URL hash (#compare=id,id) so it can be shared as a link.
@@ -110,6 +152,9 @@ const effectText = (imbuement: Imbuement, t: T) =>
     return `${row.label(t)} +${formatValue(row, value)}`;
   }).join(', ');
 
+/** "5 charges" or "60 minutes" for items that wear out, so a cheap price is not mistaken for a lasting upgrade. */
+const wearsOut = (item: Item, t: T) => (item.charges ? t('charges', { n: item.charges }) : item.duration);
+
 const vocationText = (item: Item, t: T) => (item.vocations.length ? item.vocations.map((v) => t(`voc.${v}`)).join(', ') : t('everyVocation'));
 
 export default function App() {
@@ -133,6 +178,13 @@ export default function App() {
   const [hunt, setHunt] = useState<string[]>(initialHunt);
   const [creatureQuery, setCreatureQuery] = useState('');
   const [huntNotice, setHuntNotice] = useState('');
+  const [worlds, setWorlds] = useState<string[]>(cachedWorlds);
+  const [worldsLoading, setWorldsLoading] = useState(false);
+  const [world, setWorld] = useState(() => { const w = readStored('world'); return typeof w === 'string' ? w : ''; });
+  const [market, setMarket] = useState<Map<number, Price>>();
+  const [marketStatus, setMarketStatus] = useState(''); // "loading" or the reason loading failed
+  const [ownPrices, setOwnPrices] = useState<OwnPrices>(initialOwnPrices);
+  const [budget, setBudget] = useState('');
 
   const t: T = (key, vars) => translate(lang, key, vars);
 
@@ -155,6 +207,31 @@ export default function App() {
   useEffect(() => writeStored('build', toStored(build)), [build]);
   useEffect(() => writeStored('builds', saved), [saved]);
   useEffect(() => writeStored('hunt', hunt), [hunt]);
+  useEffect(() => writeStored('world', world), [world]);
+  useEffect(() => writeStored('prices', ownPrices), [ownPrices]);
+
+  // Community prices are only fetched once the player has picked a world.
+  useEffect(() => {
+    setMarket(undefined);
+    setMarketStatus('');
+    if (!world) return;
+    const cached = cachedMarket(world);
+    if (cached) return setMarket(cached);
+    let current = true;
+    setMarketStatus('loading');
+    marketJson(`/market_values?server=${encodeURIComponent(world)}&limit=10000`)
+      .then((values) => {
+        // ~5,000 entries per world, ~1,200 of them wearable: only the catalog's items are kept.
+        const prices = (Array.isArray(values) ? values : []).flatMap((v) => {
+          const p = marketPrice(v);
+          return p && byId.has(p.id) ? [[p.id, p.price] as [number, Price]] : [];
+        });
+        writeStored('market', { world, fetchedAt: Date.now(), prices });
+        if (current) { setMarket(new Map(prices)); setMarketStatus(''); }
+      })
+      .catch((err) => { if (current) setMarketStatus((err as Error).message); });
+    return () => { current = false; };
+  }, [world]);
 
   const maxLevel = level === '' ? Infinity : Number(level);
 
@@ -181,6 +258,16 @@ export default function App() {
   const attack = hunted.length ? attackElements(hunted) : [];
   const best = bestProtection(slotOptions, incoming);
   const protectionAgainst = (e: Element) => totals.find(({ row }) => row.key === `resist.${e}`)?.total ?? 0;
+
+  const priceOf = (item: Item): Price | undefined => {
+    const own = ownPrices[world]?.[item.id];
+    return typeof own === 'number' && own > 0 ? { gold: own, kind: 'yours' } : market?.get(item.id);
+  };
+  const wornPrices = SLOTS.flatMap((s) => (build[s] ? [priceOf(build[s].item)] : []));
+  const buildValue = wornPrices.reduce((sum, p) => sum + (p?.gold ?? 0), 0);
+  const unpriced = wornPrices.filter((p) => !p).length;
+  const anyPrice = !!market?.size || Object.keys(ownPrices[world] ?? {}).length > 0;
+  const upgrades = anyPrice ? upgradesPerGold(slotOptions, incoming, (s) => build[s]?.item, (i) => priceOf(i)?.gold, parseGold(budget)) : [];
 
   useEffect(() => setLimit(PAGE), [filtered]);
 
@@ -225,6 +312,39 @@ export default function App() {
     if (!name) return;
     setSaved([...saved.filter((b) => b.name !== name), { name, slots: toStored(build) }]);
     setBuildName('');
+  }
+
+  function loadWorlds() {
+    setWorldsLoading(true);
+    marketJson('/world_data')
+      .then((list) => {
+        writeStored('worlds', { fetchedAt: Date.now(), list });
+        setWorlds(worldNames(list));
+      })
+      .catch((err) => setMarketStatus((err as Error).message))
+      .finally(() => setWorldsLoading(false));
+  }
+
+  function priceText(item: Item): string {
+    const p = priceOf(item);
+    if (!p) return market ? t('noPrice') : '';
+    if (p.kind === 'yours') return `${formatGold(p.gold)} (${t('priceYours')})`;
+    const age = p.observed ? t('daysOld', { n: Math.floor((Date.now() - p.observed) / DAY) }) : '';
+    return `${formatGold(p.gold)} (${[t(p.kind === 'sale' ? 'priceSale' : 'priceOffer'), age].filter(Boolean).join(', ')})`;
+  }
+
+  // Saved on leaving the field, and only when the text changed: re-reading "31.4kk" would round the stored price.
+  function commitOwnPrice(item: Item, input: HTMLInputElement) {
+    if (input.value === input.defaultValue) return;
+    const gold = parseGold(input.value);
+    if (input.value.trim() && !gold) {
+      input.value = input.defaultValue; // unreadable text keeps the previous price
+      return;
+    }
+    const forWorld = { ...ownPrices[world] };
+    if (gold) forWorld[item.id] = gold;
+    else delete forWorld[item.id];
+    setOwnPrices({ ...ownPrices, [world]: forWorld });
   }
 
   // An exact name wins, otherwise the first name that starts with the text ("brach" -> Brachiodemon).
@@ -338,6 +458,19 @@ export default function App() {
                     </select>
                   </label>
                   {worn && <span className="muted small">{[mainStats(worn.item, t), protections(worn.item, t)].filter(Boolean).join(' · ')}</span>}
+                  {worn && (
+                    <div className="price">
+                      <span className="muted small">{priceText(worn.item)}</span>
+                      <input
+                        key={`${world}-${worn.item.id}-${ownPrices[world]?.[worn.item.id] ?? ''}`}
+                        defaultValue={ownPrices[world]?.[worn.item.id] ? formatGold(ownPrices[world][worn.item.id]) : ''}
+                        placeholder={t('yourPrice')}
+                        aria-label={t('yourPriceFor', { name: worn.item.name })}
+                        onBlur={(e) => commitOwnPrice(worn.item, e.currentTarget)}
+                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                      />
+                    </div>
+                  )}
                   {worn && (tiers > 0 || imbueSelects > 0) && (
                     <div className="upgrades">
                       {tiers > 0 && (
@@ -370,6 +503,32 @@ export default function App() {
             })}
           </div>
           <div>
+            <h3>{t('prices')}</h3>
+            <div className="prices">
+              {worlds.length ? (
+                <label>
+                  {t('world')}
+                  <select value={world} onChange={(e) => setWorld(e.target.value)}>
+                    <option value="">{t('ownPricesOnly')}</option>
+                    {worlds.map((w) => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </label>
+              ) : (
+                <button type="button" onClick={loadWorlds} disabled={worldsLoading}>{t(worldsLoading ? 'pricesLoading' : 'loadPrices')}</button>
+              )}
+            </div>
+            <p className="muted small" role="status">
+              {marketStatus === 'loading' ? t('pricesLoading')
+                : marketStatus ? t('pricesFailed', { reason: marketStatus })
+                : market ? t('pricesFrom', { world, n: market.size })
+                : t('pricesHint')}
+            </p>
+            {wornPrices.length > 0 && (
+              <p>
+                {t('buildValue')}: <strong>{buildValue ? formatGold(buildValue) : '—'}</strong>
+                {unpriced > 0 && <span className="muted small"> · {t('unpriced', { n: unpriced })}</span>}
+              </p>
+            )}
             <h3>{t('totals')}</h3>
             {totals.length === 0 ? (
               <p className="muted">{t('totalsEmpty')}</p>
@@ -494,6 +653,8 @@ export default function App() {
                           <span>
                             <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
                             {item.level ? ` (${item.level})` : ''} · {t('blocks', { n: Math.round(blocks * 10) / 10 })}
+                            {priceOf(item) && ` · ${formatGold(priceOf(item)!.gold)}`}
+                            {wearsOut(item, t) && <span className="tag">{wearsOut(item, t)}</span>}
                             <span className="muted small"> · {protections(item, t)}</span>
                           </span>
                           {build[slot]?.item === item ? (
@@ -507,6 +668,36 @@ export default function App() {
                   </div>
                 ))}
                 <p className="muted small">{t('bestProtectionHint')}</p>
+                <h3>{t('upgrades')}</h3>
+                {!anyPrice ? (
+                  <p className="muted">{t('upgradesNeedPrices')}</p>
+                ) : (
+                  <>
+                    <label className="budget">
+                      {t('budget')}
+                      <input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="50kk" />
+                    </label>
+                    {upgrades.length === 0 ? (
+                      <p className="muted">{t('noUpgrades')}</p>
+                    ) : (
+                      <div className="best-slot">
+                        <ol>
+                          {upgrades.map(({ slot, item, gain, gold }) => (
+                            <li key={item.id}>
+                              <span>
+                                {t(`slot.${slot}`)}: <a href={wikiUrl(item.wiki)} target="_blank" rel="noreferrer" title={t('openWiki')}>{item.name}</a>
+                                {item.level ? ` (${item.level})` : ''} · {t('upgradeGain', { n: Math.round(gain * 10) / 10 })} · {formatGold(gold)}
+                                {item.duration && <span className="tag">{item.duration}</span>}
+                              </span>
+                              <button type="button" aria-label={t('wearItem', { name: item.name })} onClick={() => wear(slot, item)}>{t('wear')}</button>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                    <p className="muted small">{t('upgradesHint')}</p>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -632,6 +823,7 @@ export default function App() {
           {t('footerData', { source: meta.source, license: meta.license, date: new Date(meta.fetchedAt).toLocaleDateString(lang) })}{' '}
           <a href={meta.sourceUrl} target="_blank" rel="noreferrer">TibiaWiki</a> · <a href={meta.licenseUrl} target="_blank" rel="noreferrer">{meta.license}</a>
         </p>
+        {market && <p>{t('footerPrices')} <a href="https://tibiamarket.top" target="_blank" rel="noreferrer">Tibia Market</a></p>}
         <p>{t('footerTrademark')}</p>
       </footer>
     </div>

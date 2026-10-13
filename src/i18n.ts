@@ -113,6 +113,38 @@ const en: Record<string, string> = {
   wear: "Wear",
   wearItem: "Wear {name}",
   worn: "worn",
+  // Prices
+  prices: "Prices",
+  loadPrices: "Load community prices",
+  world: "World",
+  ownPricesOnly: "Only my own prices",
+  pricesLoading: "Loading prices…",
+  pricesFailed:
+    "Community prices could not be loaded ({reason}). You can still type your own.",
+  pricesFrom:
+    "Tibia Market prices for {world}: {n} items. A community bot collects them, so some are old or missing.",
+  pricesHint:
+    "Type your own price next to each item, or load community prices for your world.",
+  priceSale: "average sale",
+  priceOffer: "sell offer",
+  priceYours: "your price",
+  daysOld: "{n} d old",
+  noPrice: "no price",
+  yourPrice: "your price",
+  yourPriceFor: "Your price for {name}",
+  buildValue: "Build value",
+  unpriced: "{n} without a price",
+  upgrades: "Upgrades per gold",
+  budget: "Budget",
+  upgradesNeedPrices:
+    "Load community prices or type your own to see upgrades per gold.",
+  noUpgrades: "No priced upgrade within your budget.",
+  upgradeGain: "+{n}% blocked",
+  upgradesHint:
+    "Items that block more of this hunt's damage than what you wear, most gain per gold first. Only protection counts here, not armor or skills. Items with charges are left out; timed rings show how long they last.",
+  charges: "{n} charges",
+  footerPrices:
+    "Community prices come from a third-party service, not from CipSoft:",
   // Stats
   level: "Required level",
   armor: "Armor",
@@ -294,6 +326,37 @@ const pl: Record<string, string> = {
   wear: "Załóż",
   wearItem: "Załóż {name}",
   worn: "założony",
+  prices: "Ceny",
+  loadPrices: "Wczytaj ceny społeczności",
+  world: "Świat",
+  ownPricesOnly: "Tylko moje ceny",
+  pricesLoading: "Wczytywanie cen…",
+  pricesFailed:
+    "Nie udało się wczytać cen społeczności ({reason}). Nadal możesz wpisać własne.",
+  pricesFrom:
+    "Ceny z Tibia Market dla świata {world}: {n} przedmiotów. Zbiera je bot społeczności, więc część jest stara lub jej brakuje.",
+  pricesHint:
+    "Wpisz własną cenę przy każdym przedmiocie albo wczytaj ceny społeczności dla swojego świata.",
+  priceSale: "średnia sprzedaż",
+  priceOffer: "oferta sprzedaży",
+  priceYours: "twoja cena",
+  daysOld: "{n} dni temu",
+  noPrice: "brak ceny",
+  yourPrice: "twoja cena",
+  yourPriceFor: "Twoja cena za {name}",
+  buildValue: "Wartość zestawu",
+  unpriced: "{n} bez ceny",
+  upgrades: "Ulepszenia za złoto",
+  budget: "Budżet",
+  upgradesNeedPrices:
+    "Wczytaj ceny społeczności albo wpisz własne, aby zobaczyć ulepszenia za złoto.",
+  noUpgrades: "Brak wycenionego ulepszenia w twoim budżecie.",
+  upgradeGain: "+{n}% blokowane",
+  upgradesHint:
+    "Przedmioty, które blokują więcej obrażeń z tego polowania niż to, co nosisz; najpierw największy zysk za złoto. Liczy się tu tylko ochrona, nie pancerz ani umiejętności. Przedmioty z ładunkami są pominięte; przy pierścieniach na czas widać, jak długo działają.",
+  charges: "ładunki: {n}",
+  footerPrices:
+    "Ceny społeczności pochodzą z zewnętrznego serwisu, nie od CipSoft:",
   level: "Wymagany poziom",
   armor: "Pancerz",
   defense: "Obrona",

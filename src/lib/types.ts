@@ -51,6 +51,10 @@ export interface Item {
   /** Forge classification 1-4; caps the forge tier at 1, 2, 3 or 10. */
   upgradeClass?: number;
   mantra?: number;
+  /** Uses before it breaks, e.g. 5 for Stone Skin Amulet. */
+  charges?: number;
+  /** Wiki text such as "60 minutes": the item wears out while worn. */
+  duration?: string;
   augments?: string[];
   /** Attribute text the importer does not model yet. */
   other?: string[];

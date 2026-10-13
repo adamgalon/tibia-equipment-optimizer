@@ -4,13 +4,14 @@ A free web app for [Tibia](https://www.tibia.com) players to compare equipment a
 
 **Live site:** https://adamgalon.github.io/tibia-equipment-optimizer/
 
-## What it does today (steps 1–3)
+## What it does today (steps 1–4)
 
 - Browse all ~1,600 wearable items: helmets, armors, legs, boots, amulets, rings, weapons (including Monk fist weapons), shields, spellbooks, quivers and ammunition.
 - Filter by vocation, slot, your level and elemental protection; sort by level, armor, defense, attack or protection.
 - Compare up to 4 items side by side. The best value in each row is highlighted, with the difference to the first item. Comparisons are kept in the URL, so you can share a link.
 - Build editor (step 2): pick an item for each of the 10 slots, set its forge tier and imbuements, and see total armor, skills, protections and forge effect chances. Two-handed weapons take the shield off. Builds are saved in your browser.
 - Hunt advisor (step 3): pick the creatures you hunt and see their hardest hits per element and how much your build blocks, which element to attack them with, and the top 3 items per slot for that damage mix, with a button to wear each one.
+- Prices (step 4): optionally load community prices for your world, type your own ("30kk"), see your build's value and the upgrades that add the most protection per gold within a budget.
 
 ## Roadmap
 
@@ -19,7 +20,7 @@ A free web app for [Tibia](https://www.tibia.com) players to compare equipment a
 | 1 | Item catalog and comparison ✅ |
 | 2 | Build editor: all 10 slots, total skills and protections, forge tier and imbuement inputs ✅ |
 | 3 | Hunt advisor: pick creatures and see which elements hit you, the best protection per slot, and which element to attack with ✅ |
-| 4 | Prices and budget: world-specific prices and the best upgrade per gold spent |
+| 4 | Prices and budget: world-specific prices and the best upgrade per gold spent ✅ |
 | 5 | Experience and loot: experience and loot value per creature and hunting place |
 
 The research behind these choices is in [`docs/`](docs/).
@@ -43,4 +44,5 @@ Each data commit lists exactly what changed (`scripts/summarize-changes.ts`, als
 ## Data and credits
 
 - Item, imbuement and creature data comes from [TibiaWiki](https://tibia.fandom.com/) and is licensed [CC BY-SA](https://www.fandom.com/licensing). Each entry keeps the wiki revision it was read from.
+- Community prices, when a player loads them, come from [Tibia Market](https://tibiamarket.top), a third-party service whose data is collected by a bot playing the game client. They are optional, show their age, and can be replaced by your own.
 - Tibia is a trademark of CipSoft GmbH. This is a fan project, not affiliated with or endorsed by CipSoft. It uses no game graphics.

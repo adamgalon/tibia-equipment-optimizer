@@ -93,6 +93,13 @@ button:hover { border-color: var(--accent); }
 .saved li { display: flex; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .saved li span { flex: 1; overflow-wrap: anywhere; }
 
+.prices label, .budget { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+.prices select, .budget input { min-height: 36px; color: var(--text); }
+.budget { max-width: 160px; margin-bottom: 6px; }
+.price { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.price span { flex: 1; }
+.price input { width: 110px; padding: 4px 6px; }
+
 .hunt-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 8px 0; }
 .hunt-pick label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); flex: 0 1 300px; }
 .hunt-pick input { min-height: 36px; color: var(--text); }

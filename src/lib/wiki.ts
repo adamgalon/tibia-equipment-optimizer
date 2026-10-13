@@ -202,6 +202,8 @@ export function toItem(fields: Record<string, string>, page: { title: string; re
   item.imbueSlots = num(fields.imbueslots) || undefined;
   item.upgradeClass = num(fields.upgradeclass);
   item.mantra = num(fields.mantra);
+  item.charges = num(fields.charges) || undefined;
+  if (/\d/.test(fields.duration ?? '')) item.duration = fields.duration;
   if (fields.augments) item.augments = fields.augments.split(/,\s*(?=[^,]*->)/).map((s) => s.trim());
   if (attrs.other.length) item.other = attrs.other;
   if (['unavailable', 'deprecated', 'TS-only'].includes(fields.status)) item.status = fields.status as ItemStatus;

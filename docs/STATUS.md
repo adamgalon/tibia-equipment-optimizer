@@ -1,7 +1,7 @@
 # Project status
 
 **Updated:** 2026-10-13  
-**Current step:** 3 — hunt advisor (done); step 4, prices and budget, is next  
+**Current step:** 4 — prices and budget (done); step 5, experience and loot, is next  
 **Plan and stack:** see `decisions/0002-static-app-and-five-step-plan.md`
 
 ## Steps
@@ -12,8 +12,8 @@
 | 1 | Repository, item importer, item browser and side-by-side comparison, tests, CI, GitHub Pages | Done |
 | 2 | Build editor: 10 slots, totals, forge tier and imbuement inputs, saved builds | Done (Weapon Proficiency perks moved to a later step) |
 | 3 | Hunt advisor: creature damage elements, protection per slot, attack element | Done |
-| 4 | Prices and budget: community/manual prices per world, upgrade per gold | Next |
-| 5 | Experience and loot per creature and hunting place | Not started |
+| 4 | Prices and budget: community/manual prices per world, upgrade per gold | Done |
+| 5 | Experience and loot per creature and hunting place | Next |
 
 ## Step 1 outcome
 
@@ -40,6 +40,14 @@
 - Parser fix: infoboxes are now read by matching braces instead of stopping at the first line that starts with `}}`. That recovered Crypt Bile, whose infobox closes on the same line; the same import also picked up 3 items new on the wiki (Ink Sword, Moonsilver Axe, Stellar Moonsilver Axe).
 - Verification: 40 unit tests, typecheck and production build pass. Checked in headless Edge at 1280 px (English) and 390 px (Polish) with Brachiodemon and Demon against a knight level 400 build, including the "Wear" button; the table values were checked by hand.
 
+## Step 4 outcome (2026-10-13)
+
+- Decision (owner, 2026-10-13): community prices plus the player's own, as ADR 0002 planned. Tibia Market is the only public per-world source; its data comes from a bot that drives the game client (see `data-sources.md`, finding 4), so it is opt-in, labelled, and always overridable.
+- Nothing is sent to Tibia Market until the player clicks "Load community prices" and picks a world. The browser then reads `world_data` and one `market_values` list for that world (~5,000 entries, ~1,200 of them catalog items) and keeps them for an hour (world names for a day). The API allows about one request per 5 seconds; a 429 is retried once. Entries are validated before use.
+- Each price is the 30-day average sale price, else the cheapest sell offer, shown with its type and age. Own prices are typed per world in players' shorthand ("30kk", "850k", "1,200,000") and override the community price.
+- The build editor shows each worn item's price and the build value. The hunt advisor shows prices next to the best protection and lists "upgrades per gold": items that block more of the hunt's damage than the worn one, by gain per gold, within an optional budget. Weapons, ammunition and items with charges are left out of that list; items with charges or a wear-out duration are tagged ("5 charges", "60 minutes"). The importer now keeps `charges` and `duration` for that (24 and 141 items).
+- Verification: 49 unit tests, typecheck and production build pass. Checked in headless Edge against the live API for Antica: no request before opting in, 1,180 prices loaded, build value checked by hand, own price saved per world, budget filter, no new request after a reload, phone layout in Polish.
+
 ## Weekly change note (2026-10-13)
 
 - The Monday data job now writes the commit message from `scripts/summarize-changes.ts`: an exact list of added, removed and changed items, imbuements and creatures (value changes field by field; edits that only moved the wiki revision are counted, not listed), at most 40 lines per file.
@@ -62,6 +70,8 @@
 - Hunt advisor damage is the highest hit the wiki lists per element; abilities without a number and summons are not counted. "You take" applies protection only: armor, defense and mitigation, which also cut physical hits, are not modelled.
 - "Best protection" ranks items by their own protections only, without imbuements or forge tiers, and charged items such as Stone Skin Amulet and Might Ring rank high although their charges run out.
 - "Attack with" averages each creature equally, whatever its hit points or how many of it a hunt has.
+- Prices are for the base item: whether Tibia Market tracks forged (tiered) copies separately is unknown, and imbuements are not priced. Community data can be weeks old on some worlds; each price shows its age.
+- "Upgrades per gold" counts protection only, so it can suggest an item that loses armor, skills or damage. There is no CSV import of prices; they are typed one by one.
 - Saved builds cannot be shared by link or exported yet.
 - On phones the item list scrolls sideways; a card layout could replace the table later.
 - The Polish translation has not been reviewed by a native speaker.

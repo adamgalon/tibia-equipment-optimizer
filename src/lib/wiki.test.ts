@@ -78,6 +78,12 @@ describe('toItem', () => {
     expect(legs.status).toBe('unavailable');
   });
 
+  it('keeps charges and wear-out durations, ignoring placeholders', () => {
+    expect(item('| name = Stone Skin Amulet\n| itemid = 3081\n| primarytype = Amulets and Necklaces\n| charges = 5')).toMatchObject({ charges: 5 });
+    expect(item('| name = Prismatic Ring\n| itemid = 16114\n| primarytype = Rings\n| duration = 60 minutes')).toMatchObject({ duration: '60 minutes' });
+    expect(item('| name = Ring\n| itemid = 1\n| primarytype = Rings\n| duration = --\n| charges = ?')).not.toHaveProperty('duration');
+  });
+
   it('rejects non-equipment and items without an ID', () => {
     expect(item('| name = Exercise Sword\n| itemid = 28552\n| primarytype = Exercise Weapons')).toBeNull();
     expect(item('| name = Mystery Helmet\n| primarytype = Helmets')).toBeNull();
