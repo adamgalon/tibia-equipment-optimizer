@@ -1,4 +1,4 @@
-{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-13T08:29:04.349Z","count":1638},
+{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-19T10:29:03.368Z","count":1638},
 "items":[
 {"id":7414,"name":"Abyss Hammer","slot":"weapon","type":"Club Weapons","level":60,"vocations":["knight"],"skills":{},"resist":{},"wiki":"Abyss Hammer","rev":1147481,"hands":2,"defense":21,"attack":47,"imbueSlots":3,"upgradeClass":2},
 {"id":28915,"name":"Adamant Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Adamant Shield","rev":1148794,"defense":0},
@@ -175,7 +175,7 @@
 {"id":45641,"name":"Candy Necklace","slot":"neck","type":"Amulets and Necklaces","level":220,"vocations":[],"skills":{},"resist":{"physical":3,"energy":6,"earth":-5},"wiki":"Candy Necklace","rev":1194190,"armor":2},
 {"id":45644,"name":"Candy-Coated Quiver","slot":"shield","type":"Quivers","level":200,"vocations":["paladin"],"skills":{},"resist":{"fire":2},"wiki":"Candy-Coated Quiver","rev":1148580},
 {"id":3565,"name":"Cape","slot":"body","type":"Armors","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Cape","rev":1147398,"armor":1,"upgradeClass":1},
-{"id":14088,"name":"Carapace Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Carapace Shield","rev":1190663,"defense":47,"imbueSlots":1},
+{"id":14088,"name":"Carapace Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Carapace Shield","rev":1209339,"defense":47,"imbueSlots":1},
 {"id":3283,"name":"Carlin Sword","slot":"weapon","type":"Sword Weapons","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Carlin Sword","rev":1147218,"hands":1,"defense":13,"defenseMod":1,"attack":15,"upgradeClass":1},
 {"id":3435,"name":"Castle Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Castle Shield","rev":1190662,"defense":37,"imbueSlots":1},
 {"id":3395,"name":"Ceremonial Mask","slot":"head","type":"Helmets","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Ceremonial Mask","rev":1147331,"armor":9,"upgradeClass":4},
@@ -234,7 +234,7 @@
 {"id":50274,"name":"Coned Hat of Enlightenment","slot":"head","type":"Helmets","level":70,"vocations":["monk"],"skills":{"fist":1},"resist":{},"wiki":"Coned Hat of Enlightenment","rev":1148694,"armor":4,"imbueSlots":1,"upgradeClass":1,"mantra":4,"augments":["Chained Penance -> +6% base damage"]},
 {"id":3430,"name":"Copper Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Copper Shield","rev":1190661,"defense":25},
 {"id":21177,"name":"Cowtana","slot":"weapon","type":"Sword Weapons","level":25,"vocations":[],"skills":{},"resist":{},"wiki":"Cowtana","rev":1147868,"hands":1,"defense":19,"defenseMod":1,"attack":34,"upgradeClass":2},
-{"id":7415,"name":"Cranial Basher","slot":"weapon","type":"Club Weapons","level":60,"vocations":[],"skills":{},"resist":{},"wiki":"Cranial Basher","rev":1147482,"hands":1,"defense":20,"defenseMod":-2,"attack":44,"imbueSlots":2,"upgradeClass":2},
+{"id":7415,"name":"Cranial Basher","slot":"weapon","type":"Club Weapons","level":60,"vocations":[],"skills":{},"resist":{},"wiki":"Cranial Basher","rev":1209113,"hands":1,"defense":20,"defenseMod":-2,"attack":44,"imbueSlots":2,"upgradeClass":2},
 {"id":45640,"name":"Creamy Grimoire","slot":"shield","type":"Spellbooks","level":200,"vocations":["druid"],"skills":{"magic":3,"healingMagic":1},"resist":{"physical":2,"fire":5},"wiki":"Creamy Grimoire","rev":1190682,"defense":31,"imbueSlots":1,"augments":["Ultimate Ice Strike -> +33% Base Damage"],"other":["Magic Shield Capacity +150 and 3%"]},
 {"id":21892,"name":"Crest of the Deep Seas","slot":"head","type":"Helmets","level":80,"vocations":[],"skills":{},"resist":{"ice":5},"wiki":"Crest of the Deep Seas","rev":1147884,"armor":7,"speed":5,"upgradeClass":2},
 {"id":7385,"name":"Crimson Sword","slot":"weapon","type":"Sword Weapons","level":20,"vocations":[],"skills":{},"resist":{},"wiki":"Crimson Sword","rev":1147461,"hands":1,"defense":20,"defenseMod":1,"attack":28,"imbueSlots":2,"upgradeClass":1},
