@@ -1,4 +1,4 @@
-{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-19T10:29:03.388Z","count":443},
+{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-26T10:44:08.357Z","count":444},
 "hunts":[
 {"name":"Ab'Dendriel Elf Cave","city":"Ab'Dendriel","exp":2,"loot":2,"level":{"knight":20,"paladin":20,"mage":25},"creatures":["Snake","Elf","Elf Scout","Elf Arcanist"],"rev":748264},
 {"name":"Ab'Dendriel Slimes Cave","city":"Ab'Dendriel","exp":1,"loot":1,"level":{"knight":20,"paladin":20,"mage":13},"creatures":["Snake","Bat","Poison Spider","Troll","Skeleton","Rotworm","Ghoul","Slime"],"rev":748267},
@@ -18,7 +18,7 @@
 {"name":"Ashta'daramai","city":"Ankrahmun","level":{"knight":70,"paladin":65,"mage":50},"creatures":["Blue Djinn","Fire Elemental","Marid","Scarab","Lion","Stone Golem","Larva"],"rev":999896},
 {"name":"Astral Shaper Dungeon","city":"Port Hope","exp":4,"loot":4,"level":{"knight":120,"paladin":120,"mage":120},"creatures":["Broken Shaper","Twisted Shaper"],"rev":849726},
 {"name":"Astral Shaper Ruins","city":"Port Hope","exp":4,"loot":4,"level":{"knight":130,"paladin":130,"mage":130},"creatures":["Shaper Matriarch","Broken Shaper","Twisted Shaper","Stone Rhino"],"rev":849727},
-{"name":"Asura Citadel","city":"Marapur","level":{},"creatures":["True Midnight Asura","True Frost Flower Asura","Winged Jaracal","Silverfrost Sentinel","Iceplume Strider"],"rev":1195574},
+{"name":"Asura Citadel","city":"Marapur","level":{},"creatures":["True Midnight Asura","True Frost Flower Asura","Winged Jaracal","Silverfrost Sentinel","Iceplume Strider"],"rev":1210283},
 {"name":"Asura Palace","city":"Port Hope","exp":5,"loot":5,"level":{"knight":200,"paladin":200,"mage":200},"creatures":["Lich","Hydra","Hellspawn","Dawnfire Asura","Midnight Asura","Frost Flower Asura","Destroyer","Massive Fire Elemental","Massive Energy Elemental","True Dawnfire Asura","True Midnight Asura","True Frost Flower Asura","Hellhound"],"rev":1175412},
 {"name":"Asura Vaults","city":"Port Hope","exp":4,"loot":5,"level":{"knight":300,"paladin":300,"mage":300},"creatures":["Hellspawn","True Dawnfire Asura","True Midnight Asura","True Frost Flower Asura","Hellhound"],"rev":1117111},
 {"name":"Azzilon Castle","city":"Edron","level":{},"creatures":["Broodrider Inferniarch","Gorger Inferniarch","Sineater Inferniarch"],"rev":1204241},
@@ -137,6 +137,7 @@
 {"name":"Fire Dragon Dojo","city":"Farmine","exp":5,"loot":4,"level":{"knight":140,"paladin":90,"mage":110},"creatures":["Lizard Chosen"],"rev":748623},
 {"name":"Fire Sphere","city":"Edron","level":{"mage":80},"creatures":["Blazing Fire Elemental","Blistering Fire Elemental","Fire Overlord"],"rev":1116990},
 {"name":"Folda","city":"Carlin","exp":4,"loot":3,"level":{"knight":7,"paladin":7,"mage":7},"creatures":["Winter Wolf","Frost Troll","Wyvern","Rabbit","Deer","Polar Bear","Yeti","Rat","Bat","Spider","Bug","Troll","Poison Spider","Rotworm","Minotaur","Minotaur Archer","Wasp","Orc","Orc Spearman","Orc Warrior","Minotaur Mage","Slime","Snake","Scorpion","Minotaur Guard","Bonelord","Water Elemental"],"rev":1094589},
+{"name":"Forbidden Gardens","city":"Marapur","level":{},"creatures":["True Dawnfire Asura","True Feverbloom Asura"],"rev":1210284},
 {"name":"Forbidden Lands","city":"Port Hope","level":{"knight":100,"paladin":60,"mage":60},"creatures":["Snake","Crab","Cobra","Centipede","Tiger","Spit Nettle","Slime","Tarantula","Carniphila","Stone Golem","Terror Bird","Elephant","Massive Earth Elemental","Giant Spider","Hydra","Behemoth"],"rev":1114130},
 {"name":"Forbidden Temple","city":"Ankrahmun","exp":4,"loot":4,"level":{"knight":60,"paladin":40,"mage":40},"creatures":["Cobra","Novice of the Cult","Lizard Sentinel","Lizard Templar","Lizard Snakecharmer","Acolyte of the Cult","Adept of the Cult","Enlightened of the Cult"],"rev":1063515},
 {"name":"Forbidden Temple (Carlin)","city":"Carlin","exp":5,"loot":3,"level":{"knight":90,"paladin":100,"mage":100},"creatures":["Cult Believer","Vicious Squire","Renegade Knight","Vile Grandmaster","Cult Enforcer","Cult Scholar"],"rev":849357},

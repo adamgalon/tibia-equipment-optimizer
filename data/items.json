@@ -1,4 +1,4 @@
-{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-19T10:29:03.368Z","count":1638},
+{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-26T10:44:08.341Z","count":1638},
 "items":[
 {"id":7414,"name":"Abyss Hammer","slot":"weapon","type":"Club Weapons","level":60,"vocations":["knight"],"skills":{},"resist":{},"wiki":"Abyss Hammer","rev":1147481,"hands":2,"defense":21,"attack":47,"imbueSlots":3,"upgradeClass":2},
 {"id":28915,"name":"Adamant Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Adamant Shield","rev":1148794,"defense":0},
@@ -811,7 +811,7 @@
 {"id":35524,"name":"Jungle Quiver","slot":"shield","type":"Quivers","level":150,"vocations":["paladin"],"skills":{},"resist":{},"wiki":"Jungle Quiver","rev":1148427},
 {"id":35521,"name":"Jungle Rod","slot":"weapon","type":"Rods","level":150,"vocations":["druid"],"skills":{},"resist":{"earth":3},"wiki":"Jungle Rod","rev":1148424,"hands":1,"damage":{"element":"ice","min":80,"max":100},"range":4,"manaCost":19,"imbueSlots":2,"upgradeClass":4},
 {"id":50186,"name":"Jungle Survivor Legs","slot":"legs","type":"Legs","level":130,"vocations":["monk"],"skills":{"fist":1},"resist":{"fire":4},"wiki":"Jungle Survivor Legs","rev":1148663,"armor":5,"upgradeClass":4,"mantra":6},
-{"id":35522,"name":"Jungle Wand","slot":"weapon","type":"Wands","level":150,"vocations":["sorcerer"],"skills":{"magic":1},"resist":{"ice":3},"wiki":"Jungle Wand","rev":1148425,"hands":1,"damage":{"element":"earth","min":80,"max":100},"range":4,"manaCost":19,"imbueSlots":2,"upgradeClass":4},
+{"id":35522,"name":"Jungle Wand","slot":"weapon","type":"Wands","level":150,"vocations":["sorcerer"],"skills":{},"resist":{"ice":3},"wiki":"Jungle Wand","rev":1211135,"hands":1,"damage":{"element":"earth","min":80,"max":100},"range":4,"manaCost":19,"imbueSlots":2,"upgradeClass":4},
 {"id":3300,"name":"Katana","slot":"weapon","type":"Sword Weapons","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Katana","rev":1147235,"hands":1,"defense":12,"defenseMod":1,"attack":16,"upgradeClass":1},
 {"id":3291,"name":"Knife","slot":"weapon","type":"Sword Weapons","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Knife","rev":1202718,"hands":1,"defense":5,"attack":5,"upgradeClass":2},
 {"id":3370,"name":"Knight Armor","slot":"body","type":"Armors","level":0,"vocations":["knight","paladin"],"skills":{},"resist":{},"wiki":"Knight Armor","rev":1147306,"armor":12,"imbueSlots":2,"upgradeClass":2},
