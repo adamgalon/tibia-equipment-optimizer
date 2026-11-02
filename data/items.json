@@ -1,4 +1,4 @@
-{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-26T10:44:08.341Z","count":1638},
+{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-11-02T13:02:00.613Z","count":1638},
 "items":[
 {"id":7414,"name":"Abyss Hammer","slot":"weapon","type":"Club Weapons","level":60,"vocations":["knight"],"skills":{},"resist":{},"wiki":"Abyss Hammer","rev":1147481,"hands":2,"defense":21,"attack":47,"imbueSlots":3,"upgradeClass":2},
 {"id":28915,"name":"Adamant Shield","slot":"shield","type":"Shields","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Adamant Shield","rev":1148794,"defense":0},
@@ -1384,7 +1384,7 @@
 {"id":52352,"name":"Stag Shinguards","slot":"feet","type":"Boots","level":350,"vocations":["paladin"],"skills":{"distance":1},"resist":{"physical":2,"energy":5},"wiki":"Stag Shinguards","rev":1208115,"armor":2,"speed":10,"imbueSlots":1,"upgradeClass":4,"augments":["Divine Grenade -> +8% critical extra damage"]},
 {"id":52355,"name":"Stag Spellbook","slot":"shield","type":"Spellbooks","level":350,"vocations":["sorcerer"],"skills":{"magic":5},"resist":{"physical":2,"energy":6},"wiki":"Stag Spellbook","rev":1208114,"defense":34,"imbueSlots":1,"augments":["Great Fire Wave -> +1% critical hit chance"]},
 {"id":9376,"name":"Stale Bread of Ancientness","slot":"weapon","type":"Club Weapons","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Stale Bread of Ancientness","rev":1147645,"hands":1,"defense":8,"attack":18,"upgradeClass":2},
-{"id":3014,"name":"Star Amulet","slot":"neck","type":"Amulets and Necklaces","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Star Amulet","rev":1194193},
+{"id":3014,"name":"Star Amulet","slot":"neck","type":"Amulets and Necklaces","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Star Amulet","rev":1211746},
 {"id":12669,"name":"Star Ring","slot":"ring","type":"Rings","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Star Ring","rev":1194111,"duration":"10 minutes","other":["faster regeneration"]},
 {"id":3049,"name":"Stealth Ring","slot":"ring","type":"Rings","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Stealth Ring","rev":1194097,"duration":"10 minutes","other":["invisibility"]},
 {"id":7773,"name":"Steel Axe","slot":"weapon","type":"Axe Weapons","level":0,"vocations":[],"skills":{},"resist":{},"wiki":"Steel Axe","rev":1147525,"hands":1,"defense":10,"attack":21,"upgradeClass":1},

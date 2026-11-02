@@ -1,4 +1,4 @@
-{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-10-26T10:44:08.357Z","count":444},
+{"meta":{"source":"TibiaWiki (tibia.fandom.com)","sourceUrl":"https://tibia.fandom.com/","license":"CC BY-SA","licenseUrl":"https://www.fandom.com/licensing","fetchedAt":"2026-11-02T13:02:00.634Z","count":444},
 "hunts":[
 {"name":"Ab'Dendriel Elf Cave","city":"Ab'Dendriel","exp":2,"loot":2,"level":{"knight":20,"paladin":20,"mage":25},"creatures":["Snake","Elf","Elf Scout","Elf Arcanist"],"rev":748264},
 {"name":"Ab'Dendriel Slimes Cave","city":"Ab'Dendriel","exp":1,"loot":1,"level":{"knight":20,"paladin":20,"mage":13},"creatures":["Snake","Bat","Poison Spider","Troll","Skeleton","Rotworm","Ghoul","Slime"],"rev":748267},
@@ -227,7 +227,7 @@
 {"name":"Kazordoon Minotaurs","city":"Kazordoon","exp":3,"loot":3,"level":{"knight":20,"paladin":15,"mage":15},"creatures":["Deer","Snake","Spider","Wolf","Poison Spider","Bear","Minotaur","Minotaur Archer","Bat","The Horned Fox","Minotaur Guard","Minotaur Mage"],"rev":1117008},
 {"name":"Kendram Benson's Grave","city":"Rookgaard","exp":1,"loot":1,"level":{"knight":7,"paladin":7,"mage":7},"creatures":["Spider","Poison Spider","Skeleton","Rotworm","Rottie the Rotworm","Ghoul"],"rev":1116999},
 {"name":"Kha'zeel Dragon Lairs/Kha'labal","city":"Ankrahmun","exp":3,"loot":3,"level":{"knight":40,"paladin":25,"mage":28},"creatures":["Scorpion","Dragon","Dragon Lord","Fire Elemental"],"rev":884128},
-{"name":"Kha'zeel Dragon Lairs/Tiquanda","city":"Port Hope","exp":3,"loot":4,"level":{"knight":50,"paladin":40,"mage":40},"creatures":["Dragon Hatchling","Dragon","Dragon Lord","Dragon Lord Hatchling"],"rev":1117034},
+{"name":"Kha'zeel Dragon Lairs/Tiquanda","city":"Port Hope","exp":3,"loot":4,"level":{"knight":50,"paladin":40,"mage":40},"creatures":["Dragon Hatchling","Dragon","Dragon Lord","Dragon Lord Hatchling"],"rev":1211827},
 {"name":"Kha'zeel Scarab Lair","city":"Ankrahmun","exp":4,"loot":4,"level":{"knight":80,"paladin":75,"mage":60},"creatures":["Larva","Scarab","Ancient Scarab"],"rev":1117042},
 {"name":"Killer Caiman Cave","city":"Farmine","exp":4,"loot":3,"level":{"knight":60,"paladin":70,"mage":60},"creatures":["Killer Caiman"],"rev":844984},
 {"name":"Kilmaresh Catacombs","city":"Issavi","level":{"knight":350,"paladin":300,"mage":300},"creatures":["Crypt Warden","Sphinx","Priestess of the Wild Sun","Black Sphinx Acolyte","Burning Gladiator"],"rev":848210},
